@@ -1,0 +1,6 @@
+name = "ludoria-worker"
+main = "apps/worker/src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Phase 0 only: this file documents intended local Worker shape.
+# Do not create real D1, R2, or Durable Object resources from this scaffold.

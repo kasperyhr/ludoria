@@ -1,0 +1,19 @@
+{
+  "name": "@ludoria/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@ludoria/protocol": "workspace:*",
+    "hono": "^4.11.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251223.0"
+  }
+}

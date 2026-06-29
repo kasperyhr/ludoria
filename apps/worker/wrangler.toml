@@ -1,0 +1,5 @@
+name = "ludoria-worker"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Phase 0: no real D1, R2, or Durable Object bindings yet.
