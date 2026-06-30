@@ -26,6 +26,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ludoria/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@ludoria/ui':
         specifier: workspace:*
         version: link:../../packages/ui

@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 ## Phase 0: bootstrap
 
@@ -6,15 +6,15 @@
 
 ## Phase 1: runnable shell
 
-让 web 和 worker 都能本地运行，建立基础导航和健康检查。
+让 web 和 worker 都能本地运行，建立基础导航、health API、mock 游戏目录和共享协议类型。
 
 ## Phase 2: demo multiplayer game
 
-实现一个很小的多人 demo，用于验证 GameSessionActor、WebSocket 和 view projection。
+实现一个很小的多人 demo，用于验证 GameSessionActor、WebSocket、命令校验、事件流、服务器权威状态和 view projection。
 
 ## Phase 3: demo solo puzzle
 
-实现 Sudoku 或 Nonogram demo，验证 progress、hint 和 completion check。
+实现 Sudoku 或 Nonogram demo，验证 progress、hint、completion check 和 solution hash。
 
 ## Phase 4: Cloudflare integration
 

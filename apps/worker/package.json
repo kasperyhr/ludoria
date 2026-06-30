@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --local",
+    "dev": "wrangler dev --local --port 8787",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.mjs"

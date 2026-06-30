@@ -4,7 +4,9 @@
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "corepack pnpm --parallel --filter @ludoria/web --filter @ludoria/worker run dev",
+    "dev:web": "corepack pnpm --filter @ludoria/web run dev",
+    "dev:worker": "corepack pnpm --filter @ludoria/worker run dev",
     "build": "corepack pnpm -r --workspace-concurrency=1 run build",
     "typecheck": "corepack pnpm -r --workspace-concurrency=1 run typecheck",
     "lint": "node scripts/lint.mjs",

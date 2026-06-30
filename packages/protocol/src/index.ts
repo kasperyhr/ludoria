@@ -18,3 +18,28 @@ export type ProtocolErrorCode =
   | 'SESSION_NOT_FOUND'
   | 'COMMAND_REJECTED'
   | 'RATE_LIMITED';
+
+export type GameMode = 'multiplayer' | 'solo';
+
+export type GameStatus = 'planned' | 'preview' | 'available';
+
+export interface GameCatalogItem {
+  id: string;
+  name: string;
+  mode: GameMode;
+  status: GameStatus;
+  description: string;
+  playerCountLabel: string;
+}
+
+export interface HealthResponse {
+  ok: true;
+  service: 'ludoria-worker';
+  phase: 'phase-1';
+}
+
+export interface ApiError {
+  ok: false;
+  code: ProtocolErrorCode;
+  message: string;
+}
