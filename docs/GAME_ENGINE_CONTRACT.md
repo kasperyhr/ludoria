@@ -1,25 +1,55 @@
-﻿# Game Engine Contract
+# Game Engine Contract
 
 ## MultiplayerGameDefinition
 
-多人游戏定义放在 `packages/game-definitions`，共享接口来自 `packages/game-engine`。接口必须描述命令校验、事件应用、视角生成和复盘摘要。
+`packages/game-engine` 提供通用 `MultiplayerGameDefinition`。Phase 2 版本包含：
 
-## SoloPuzzleDefinition
+- `setup`
+- `validateCommand`
+- `applyCommand`
+- `applyEvent`
+- `getPlayerView`
+- `getSpectatorView`
+- `getReviewSummary`
 
-单人 puzzle 定义描述 puzzle、progress、move 和 completion，不直接向前端暴露明文 solution。
+具体游戏规则必须放在 `packages/game-definitions`，不能写在 React 组件或 API route handler 中。
+
+## GameCommand
+
+`GameCommand` 表示玩家提交的命令。Token Bluffing Demo 当前支持：
+
+```text
+DECLARE_TOKEN_COUNT
+```
+
+命令只表达玩家声明，不直接修改状态。
+
+## GameEvent
+
+命令通过校验后生成 event。Phase 2 的 public event 不能包含任何玩家实际隐藏 token 列表。
+
+## GameSessionState
+
+`GameSessionState` 是服务器权威状态，可以包含隐藏 token。完整 state 不允许发送给前端。
+
+## PlayerView
+
+`getPlayerView` 为单个玩家生成安全视角。玩家可以看到自己的隐藏 token，也只能看到其他玩家的 token 数量。
+
+## SpectatorView
+
+`getSpectatorView` 为观战者生成安全视角。观战者只能看到玩家列表、连接状态、token 数量和 public events。
 
 ## Command/Event/State/View
 
-多人游戏必须遵循 `Command -> Validate -> Event -> State -> View`。Command 来自玩家，Validate 产生结果，Event 更新 State，View 是发给玩家或观战者的安全投影。
+多人游戏必须保持：
 
-## getPlayerView
+```text
+Command -> Validate -> Event -> State -> View
+```
 
-根据玩家身份生成只属于该玩家的视角，可以包含自己的手牌、私有 token 或允许查看的信息。
-
-## getSpectatorView
-
-生成观战视角，不能包含任何玩家私有信息。
+这个顺序是 Ludoria 多人游戏架构的核心护栏。
 
 ## getReviewSummary
 
-游戏结束后生成复盘摘要，只包含可公开或可授权查看的信息。
+Phase 2 只保留 placeholder summary：session id、game id、玩家数量和 public event 数量。后续真实游戏结束后再生成复盘摘要。

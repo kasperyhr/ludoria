@@ -10,6 +10,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@ludoria/game-definitions": "workspace:*",
     "@ludoria/protocol": "workspace:*",
     "hono": "^4.11.2"
   },

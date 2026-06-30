@@ -251,6 +251,85 @@ h1 {
   color: #ffad9d;
 }
 
+.demo-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.control-panel {
+  padding: 22px;
+}
+
+.control-panel h2 {
+  margin: 0 0 16px;
+}
+
+.control-panel label {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 14px;
+  color: #cbb9a6;
+  font-size: 0.86rem;
+}
+
+.control-panel input,
+.control-panel select {
+  min-height: 40px;
+  border: 1px solid rgba(224, 173, 99, 0.26);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #f7efe2;
+  background: rgba(255, 246, 230, 0.08);
+}
+
+.token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player-list,
+.event-log,
+.chat-log {
+  display: grid;
+  gap: 10px;
+}
+
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(224, 173, 99, 0.14);
+}
+
+.event-log {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.event-log pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  color: #d9cabb;
+  background: rgba(0, 0, 0, 0.22);
+  white-space: pre-wrap;
+}
+
+.chat-log {
+  min-height: 120px;
+  max-height: 220px;
+  overflow: auto;
+  color: #d9cabb;
+}
+
 @media (max-width: 840px) {
   .app-shell {
     padding: 20px;
@@ -272,6 +351,10 @@ h1 {
   }
 
   .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-grid {
     grid-template-columns: 1fr;
   }
 }

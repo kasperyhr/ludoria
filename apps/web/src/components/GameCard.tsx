@@ -1,5 +1,5 @@
 import type { GameCatalogItem } from '@ludoria/protocol';
-import { Badge, Card } from '@ludoria/ui';
+import { Badge, Button, Card } from '@ludoria/ui';
 
 const modeLabel: Record<GameCatalogItem['mode'], string> = {
   multiplayer: '多人桌游',
@@ -13,6 +13,8 @@ const statusLabel: Record<GameCatalogItem['status'], string> = {
 };
 
 export function GameCard({ game }: { game: GameCatalogItem }) {
+  const canOpenDemo = game.id === 'token-bluffing-demo';
+
   return (
     <Card className="game-card">
       <div className="game-card__topline">
@@ -23,7 +25,11 @@ export function GameCard({ game }: { game: GameCatalogItem }) {
       <p>{game.description}</p>
       <div className="game-card__footer">
         <span>{game.playerCountLabel}</span>
-        <span>{game.id}</span>
+        {canOpenDemo ? (
+          <Button onClick={() => { window.location.href = '/demo/token-bluffing'; }}>进入 demo</Button>
+        ) : (
+          <span>{game.id}</span>
+        )}
       </div>
     </Card>
   );

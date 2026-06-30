@@ -12,6 +12,7 @@ export default defineConfig({
       '/worker-api': {
         target: workerOrigin,
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/worker-api/, '')
       }
     }

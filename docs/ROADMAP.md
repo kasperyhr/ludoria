@@ -10,15 +10,15 @@
 
 ## Phase 2: demo multiplayer game
 
-实现一个很小的多人 demo，用于验证 GameSessionActor、WebSocket、命令校验、事件流、服务器权威状态和 view projection。
+实现 Token Bluffing Demo，用于验证 `GameSessionActor` placeholder、WebSocket、命令校验、事件流、服务器权威状态和安全 view projection。
 
 ## Phase 3: demo solo puzzle
 
-实现 Sudoku 或 Nonogram demo，验证 progress、hint、completion check 和 solution hash。
+实现 Sudoku 或 Nonogram demo，验证 `Puzzle -> Progress -> Move -> Completion`、progress autosave、hint、completion check、unique solution verification 和 solution hash。
 
 ## Phase 4: Cloudflare integration
 
-接入 D1、Durable Objects、R2 和 Wrangler 部署流程。
+把本地 `GameSessionActor` placeholder 迁移到 Durable Objects，接入 D1、R2 和 Wrangler 部署流程。
 
 ## Phase 5: polish UI
 

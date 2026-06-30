@@ -48,6 +48,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@ludoria/game-definitions':
+        specifier: workspace:*
+        version: link:../../packages/game-definitions
       '@ludoria/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
