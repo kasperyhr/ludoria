@@ -1,15 +1,34 @@
 import { Hono } from 'hono';
+import {
+  parseApplyPuzzleMoveRequest,
+  parseJoinSessionRequest
+} from '@ludoria/protocol';
 import type {
   ApiError,
+  ApplyPuzzleMoveResponse,
+  CreatePuzzleSessionResponse,
   CreateSessionResponse,
   HealthResponse,
-  JoinSessionRequest,
-  ProtocolErrorCode
+  ProtocolErrorCode,
+  PuzzleCompletionResponse,
+  PuzzleHintResponse,
+  PuzzlePublicView
 } from '@ludoria/protocol';
+import {
+  sudokuLiteBuiltInPuzzle,
+  sudokuLiteDefinition
+} from '@ludoria/game-definitions';
+import type { SudokuLiteProgress } from '@ludoria/game-definitions';
 import { gameCatalog } from './catalog';
 import { createGameSessionActor, getGameSessionActor } from './game-session-actor';
 
+interface PuzzleSession {
+  sessionId: string;
+  progress: SudokuLiteProgress;
+}
+
 const app = new Hono();
+const puzzleSessions = new Map<string, PuzzleSession>();
 
 const localCorsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +43,14 @@ function apiError(code: ProtocolErrorCode, message: string): ApiError {
 function getOrigin(url: string) {
   const parsed = new URL(url);
   return `${parsed.protocol}//${parsed.host}`;
+}
+
+function createPuzzlePublicView(session: PuzzleSession): PuzzlePublicView {
+  return {
+    sessionId: session.sessionId,
+    puzzle: sudokuLiteDefinition.getPublicPuzzle(sudokuLiteBuiltInPuzzle),
+    progress: session.progress
+  };
 }
 
 app.use('*', async (c, next) => {
@@ -42,7 +69,7 @@ app.get('/health', (c) => {
   const response: HealthResponse = {
     ok: true,
     service: 'ludoria-worker',
-    phase: 'phase-2'
+    phase: 'phase-3'
   };
 
   return c.json(response);
@@ -68,13 +95,14 @@ app.post('/api/sessions/:sessionId/join', async (c) => {
     return c.json(apiError('SESSION_NOT_FOUND', 'Session not found.'), 404);
   }
 
-  const body = await c.req.json<JoinSessionRequest>().catch(() => null);
+  const input = await c.req.json().catch(() => null);
+  const parsed = parseJoinSessionRequest(input);
 
-  if (!body || !body.displayName?.trim() || !['player', 'spectator'].includes(body.role)) {
-    return c.json(apiError('INVALID_MESSAGE', 'displayName and role are required.'), 400);
+  if (!parsed.ok) {
+    return c.json(apiError('INVALID_MESSAGE', parsed.message), 400);
   }
 
-  const response = actor.join(body.displayName.trim().slice(0, 32), body.role);
+  const response = actor.join(parsed.value.displayName, parsed.value.role);
 
   return c.json({
     ...response,
@@ -105,6 +133,79 @@ app.get('/api/sessions/:sessionId/connect', (c) => {
     status: 101,
     webSocket: client
   });
+});
+
+app.post('/api/puzzles/sudoku-lite/sessions', (c) => {
+  const session: PuzzleSession = {
+    sessionId: `puzzle-${crypto.randomUUID()}`,
+    progress: sudokuLiteDefinition.createInitialProgress(sudokuLiteBuiltInPuzzle)
+  };
+  puzzleSessions.set(session.sessionId, session);
+
+  const response: CreatePuzzleSessionResponse = createPuzzlePublicView(session);
+  return c.json(response, 201);
+});
+
+app.get('/api/puzzles/:sessionId', (c) => {
+  const session = puzzleSessions.get(c.req.param('sessionId'));
+
+  if (!session) {
+    return c.json(apiError('SESSION_NOT_FOUND', 'Puzzle session not found.'), 404);
+  }
+
+  return c.json(createPuzzlePublicView(session));
+});
+
+app.post('/api/puzzles/:sessionId/move', async (c) => {
+  const session = puzzleSessions.get(c.req.param('sessionId'));
+
+  if (!session) {
+    return c.json(apiError('SESSION_NOT_FOUND', 'Puzzle session not found.'), 404);
+  }
+
+  const input = await c.req.json().catch(() => null);
+  const parsed = parseApplyPuzzleMoveRequest(input);
+
+  if (!parsed.ok) {
+    return c.json(apiError('INVALID_MESSAGE', parsed.message), 400);
+  }
+
+  const result = sudokuLiteDefinition.applyMove(sudokuLiteBuiltInPuzzle, session.progress, parsed.value);
+
+  if (!result.ok) {
+    return c.json(apiError('COMMAND_REJECTED', result.message), 400);
+  }
+
+  session.progress = result.value;
+
+  const response: ApplyPuzzleMoveResponse = {
+    progress: session.progress
+  };
+  return c.json(response);
+});
+
+app.post('/api/puzzles/:sessionId/hint', (c) => {
+  const session = puzzleSessions.get(c.req.param('sessionId'));
+
+  if (!session) {
+    return c.json(apiError('SESSION_NOT_FOUND', 'Puzzle session not found.'), 404);
+  }
+
+  const response: PuzzleHintResponse = {
+    hint: sudokuLiteDefinition.getHint(sudokuLiteBuiltInPuzzle, session.progress)
+  };
+  return c.json(response);
+});
+
+app.post('/api/puzzles/:sessionId/check', (c) => {
+  const session = puzzleSessions.get(c.req.param('sessionId'));
+
+  if (!session) {
+    return c.json(apiError('SESSION_NOT_FOUND', 'Puzzle session not found.'), 404);
+  }
+
+  const response: PuzzleCompletionResponse = sudokuLiteDefinition.checkCompletion(sudokuLiteBuiltInPuzzle, session.progress);
+  return c.json(response);
 });
 
 app.notFound((c) => c.json(apiError('SESSION_NOT_FOUND', 'Route not found'), 404));

@@ -1,3 +1,5 @@
+import * as v from 'valibot';
+
 export type ProtocolErrorCode =
   | 'UNAUTHORIZED'
   | 'INVALID_MESSAGE'
@@ -21,13 +23,31 @@ export interface GameCatalogItem {
 export interface HealthResponse {
   ok: true;
   service: 'ludoria-worker';
-  phase: 'phase-1' | 'phase-2';
+  phase: 'phase-1' | 'phase-2' | 'phase-3';
 }
 
 export interface ApiError {
   ok: false;
   code: ProtocolErrorCode;
   message: string;
+}
+
+export type SchemaParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; code: 'INVALID_MESSAGE'; message: string };
+
+function parseWithSchema<T>(schema: v.GenericSchema<unknown, T>, input: unknown): SchemaParseResult<T> {
+  const result = v.safeParse(schema, input);
+
+  if (result.success) {
+    return { ok: true, value: result.output };
+  }
+
+  return {
+    ok: false,
+    code: 'INVALID_MESSAGE',
+    message: result.issues.map((issue) => issue.message).join('; ') || 'Invalid payload.'
+  };
 }
 
 export type SessionRole = 'player' | 'spectator';
@@ -38,9 +58,15 @@ export interface CreateSessionResponse {
   websocketUrl: string;
 }
 
-export interface JoinSessionRequest {
-  displayName: string;
-  role: SessionRole;
+export const JoinSessionRequestSchema = v.object({
+  displayName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(32)),
+  role: v.picklist(['player', 'spectator'])
+});
+
+export type JoinSessionRequest = v.InferOutput<typeof JoinSessionRequestSchema>;
+
+export function parseJoinSessionRequest(input: unknown): SchemaParseResult<JoinSessionRequest> {
+  return parseWithSchema(JoinSessionRequestSchema, input);
 }
 
 export interface JoinSessionResponse {
@@ -95,12 +121,43 @@ export interface DeclareTokenCountCommandPayload {
   count: number;
 }
 
-export type ClientToServerMessage =
-  | { type: 'JOIN_SESSION'; displayName: string; role: SessionRole }
-  | { type: 'RECONNECT'; sessionToken: string }
-  | { type: 'SUBMIT_COMMAND'; commandId: string; command: { type: 'DECLARE_TOKEN_COUNT'; payload: DeclareTokenCountCommandPayload } }
-  | { type: 'CHAT_MESSAGE'; text: string }
-  | { type: 'HEARTBEAT'; at: number };
+export const DeclareTokenCountCommandSchema = v.object({
+  type: v.literal('DECLARE_TOKEN_COUNT'),
+  payload: v.object({
+    token: v.picklist(['red', 'blue', 'gold']),
+    count: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9))
+  })
+});
+
+export const ClientToServerMessageSchema = v.variant('type', [
+  v.object({
+    type: v.literal('JOIN_SESSION'),
+    displayName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(32)),
+    role: v.picklist(['player', 'spectator'])
+  }),
+  v.object({
+    type: v.literal('RECONNECT')
+  }),
+  v.object({
+    type: v.literal('SUBMIT_COMMAND'),
+    commandId: v.pipe(v.string(), v.minLength(1)),
+    command: DeclareTokenCountCommandSchema
+  }),
+  v.object({
+    type: v.literal('CHAT_MESSAGE'),
+    text: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(240))
+  }),
+  v.object({
+    type: v.literal('HEARTBEAT'),
+    at: v.number()
+  })
+]);
+
+export type ClientToServerMessage = v.InferOutput<typeof ClientToServerMessageSchema>;
+
+export function parseClientToServerMessage(input: unknown): SchemaParseResult<ClientToServerMessage> {
+  return parseWithSchema(ClientToServerMessageSchema, input);
+}
 
 export type ServerToClientMessage =
   | { type: 'SESSION_SNAPSHOT'; view: TokenBluffingView; sessionId: string; role: SessionRole }
@@ -116,4 +173,70 @@ export interface ChatMessage {
   displayName: string;
   text: string;
   createdAt: string;
+}
+
+export type SudokuCellValue = 1 | 2 | 3 | 4;
+
+export interface SudokuLitePublicPuzzle {
+  id: 'sudoku-lite-built-in-001';
+  gameId: 'sudoku-lite';
+  size: 4;
+  boxSize: 2;
+  difficulty: 'intro';
+  givens: Array<{
+    row: number;
+    col: number;
+    value: SudokuCellValue;
+  }>;
+  solutionHash: string;
+}
+
+export interface PuzzleProgressView {
+  cells: Array<Array<SudokuCellValue | null>>;
+  updatedAt: string;
+  moveCount: number;
+}
+
+export interface PuzzlePublicView {
+  sessionId: string;
+  puzzle: SudokuLitePublicPuzzle;
+  progress: PuzzleProgressView;
+}
+
+export interface CreatePuzzleSessionResponse extends PuzzlePublicView {}
+
+export const ApplyPuzzleMoveRequestSchema = v.object({
+  row: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(3)),
+  col: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(3)),
+  value: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(4)))
+});
+
+export interface ApplyPuzzleMoveRequest {
+  row: number;
+  col: number;
+  value: SudokuCellValue | null;
+}
+
+export function parseApplyPuzzleMoveRequest(input: unknown): SchemaParseResult<ApplyPuzzleMoveRequest> {
+  return parseWithSchema(ApplyPuzzleMoveRequestSchema, input) as SchemaParseResult<ApplyPuzzleMoveRequest>;
+}
+
+export interface ApplyPuzzleMoveResponse {
+  progress: PuzzleProgressView;
+}
+
+export interface PuzzleHintResponse {
+  hint: {
+    row: number;
+    col: number;
+    candidates: SudokuCellValue[];
+    message: string;
+  } | null;
+}
+
+export interface PuzzleCompletionResponse {
+  isComplete: boolean;
+  isSolved: boolean;
+  emptyCells: number;
+  errorCount: number;
 }

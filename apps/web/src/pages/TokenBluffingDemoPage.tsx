@@ -171,8 +171,8 @@ export function TokenBluffingDemoPage() {
             </label>
             <div className="actions">
               <Button onClick={handleCreateSession}>创建 session</Button>
-              <Button onClick={() => handleJoin('player')}>作为玩家加入</Button>
-              <Button variant="secondary" onClick={() => handleJoin('spectator')}>作为观战者加入</Button>
+              <Button onClick={() => { void handleJoin('player'); }}>作为玩家加入</Button>
+              <Button variant="secondary" onClick={() => { void handleJoin('spectator'); }}>作为观战者加入</Button>
               <Button variant="secondary" onClick={handleReconnect}>断线重连</Button>
             </div>
             <p className="panel-note">连接状态：<Badge>{connectionStatus}</Badge> 当前身份：<Badge>{role}</Badge></p>

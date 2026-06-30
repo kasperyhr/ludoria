@@ -48,15 +48,19 @@ export function HomePage() {
       <main>
         <section className="hero">
           <div className="hero__content">
-            <p className="eyebrow">Phase 1 runnable shell</p>
+            <p className="eyebrow">Phase 3 solo puzzle shell</p>
             <h1>温暖、克制、为桌游而生的在线大厅</h1>
             <p>
-              Ludoria 现在可以本地启动前端与 Worker，并通过共享协议读取 health
-              状态和 mock 游戏目录。完整房间、账号和游戏规则会留到后续阶段。
+              Ludoria 现在可以本地启动前端与 Worker，读取共享协议、展示游戏目录，并运行多人隐藏信息
+              demo 与 Sudoku Lite 单人谜题 demo。完整房间、账号和持久化会在后续阶段继续接入。
             </p>
             <div className="actions">
-              <Button>查看游戏目录</Button>
-              <Button variant="secondary">检查 Worker</Button>
+              <Button onClick={() => document.querySelector('#catalog')?.scrollIntoView({ behavior: 'smooth' })}>
+                查看游戏目录
+              </Button>
+              <Button variant="secondary" onClick={() => { void getHealth().then(setHealth); }}>
+                检查 Worker
+              </Button>
             </div>
           </div>
           <HealthStatus health={health} isLoading={isLoading} error={error} />
@@ -64,7 +68,7 @@ export function HomePage() {
 
         <section className="section-heading" id="catalog">
           <p className="eyebrow">Game catalog</p>
-          <h2>Mock 游戏列表</h2>
+          <h2>可运行与规划中的游戏</h2>
           <p>这些条目来自 Worker 的 `/api/games`，类型由 `packages/protocol` 共享。</p>
         </section>
 

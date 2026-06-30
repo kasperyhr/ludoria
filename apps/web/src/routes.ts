@@ -1,4 +1,5 @@
 import { HomePage } from './pages/HomePage';
+import { SudokuLitePage } from './pages/SudokuLitePage';
 import { TokenBluffingDemoPage } from './pages/TokenBluffingDemoPage';
 
 export const routes = [
@@ -11,5 +12,10 @@ export const routes = [
     path: '/demo/token-bluffing',
     label: 'Token Bluffing Demo',
     Component: TokenBluffingDemoPage
+  },
+  {
+    path: '/demo/sudoku-lite',
+    label: 'Sudoku Lite',
+    Component: SudokuLitePage
   }
 ] as const;

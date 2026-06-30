@@ -37,7 +37,7 @@ export type TokenBluffingEvent = GameEvent<
   {
     playerId: string;
     displayName: string;
-    token?: TokenColor;
+    declaredToken?: TokenColor;
     declaredCount?: number;
   }
 > & { isPublic: true };
@@ -160,7 +160,7 @@ function validateDeclareTokenCount(
     value: createPublicEvent(state.sessionId, 'TOKEN_COUNT_DECLARED', {
       playerId: player.id,
       displayName: player.displayName,
-      token: command.payload.token,
+      declaredToken: command.payload.token,
       declaredCount: command.payload.count
     })
   };

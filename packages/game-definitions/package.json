@@ -11,6 +11,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@ludoria/game-engine": "workspace:*"
+    "@ludoria/game-engine": "workspace:*",
+    "@ludoria/protocol": "workspace:*"
   }
 }

@@ -9,5 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "valibot": "^1.2.0"
   }
 }

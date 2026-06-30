@@ -1,33 +1,53 @@
-﻿# Solo Puzzle Contract
+# Solo Puzzle Contract
 
-## Sudoku
+Solo puzzle games use a small contract that keeps puzzle rules outside React and outside route handlers.
 
-Sudoku 需要题目生成、唯一解验证、难度评级、进度保存、提示和完成检查。
+## Flow
 
-## Nonogram
+```text
+Puzzle -> Progress -> Move -> Completion
+```
 
-Nonogram 需要题面线索、网格进度、错误检查策略和完成判断。
+- `Puzzle`: immutable puzzle definition and private solution data.
+- `Progress`: player-editable state that can be saved and resumed.
+- `Move`: a small player action such as setting or clearing one cell.
+- `Completion`: server-side result derived from puzzle plus progress.
 
-## puzzle generation
+## Sudoku Lite
 
-生成逻辑必须在 puzzle engine 或服务端侧完成，不能散落到 React 组件。
+Phase 3 implements `sudoku-lite`, a fixed 4x4 puzzle used to validate the contract before adding generation, persistence, or full-size Sudoku.
 
-## progress autosave
+The public puzzle includes:
 
-前端提交 move，服务端或本地持久层保存 progress。
+- `id`
+- `gameId`
+- `size`
+- `boxSize`
+- `difficulty`
+- `givens`
+- `solutionHash`
 
-## hint
+The public puzzle does not include the solution grid.
 
-提示必须基于安全的 puzzle representation，不能泄露完整 solution。
+## Move Validation
 
-## completion check
+Moves are validated in `packages/game-definitions/src/solo/sudoku-lite.ts`.
 
-完成检查使用 progress 和 puzzle metadata，不依赖前端自报完成。
+Sudoku Lite rejects:
 
-## unique solution verification
+- coordinates outside the 4x4 board
+- non-integer coordinates
+- attempts to edit givens
+- values outside `1..4`
 
-适用游戏必须验证唯一解，例如 Sudoku。
+## Hinting
 
-## solution hash
+Hints return one target cell and a small candidate list. They must not return the full solution or enough structured data to reconstruct it directly.
 
-可以保存 solution hash 或不可逆校验信息，避免把明文 solution 发送到前端。
+## Completion
+
+Completion checks compare progress against the private puzzle solution on the server side. The frontend cannot self-report completion.
+
+## Persistence
+
+Phase 3 stores puzzle sessions in Worker memory only. Phase 4 should move progress storage to Durable Objects and/or D1.

@@ -1,48 +1,52 @@
 # Security Model
 
-## 隐藏信息安全
+Ludoria treats the frontend as untrusted. UI state and disabled buttons are convenience only; Worker endpoints and game definitions must validate all meaningful input.
 
-Token Bluffing Demo 的 full state 中包含玩家 hidden tokens，但 full state 永远不发送给前端。
+## Hidden Multiplayer Information
 
-## 不信任前端
+`Token Bluffing Demo` full state contains player hidden tokens. Full state is never sent to clients.
 
-前端只能提交 command。服务器必须校验玩家是否存在、命令类型是否合法、payload 是否合理。前端 UI 禁用按钮不算安全边界。
-
-## Player view
-
-`getPlayerView` 只把当前玩家自己的 hidden tokens 放进 `self.hiddenTokens`。其他玩家只暴露：
+`getPlayerView` may include the current player's own `self.hiddenTokens`, but other players expose only:
 
 - `id`
 - `displayName`
 - `tokenCount`
 - `connected`
 
-## Spectator view
+`getSpectatorView` must not include any `hiddenTokens` field.
 
-`getSpectatorView` 不包含任何 `hiddenTokens` 字段。观战者只能看到玩家列表、token 数量和 public events。
+Public events may include what a player declared, using `declaredToken`, but must not include the player's real hidden token list.
 
-## Public event
+## Runtime Protocol Validation
 
-Public event 可以包含玩家声明了什么，但不能包含玩家实际持有哪些 token。Phase 2 测试覆盖了 public event 不泄露 hidden token 字段。
+`packages/protocol` uses Valibot to reject malformed payloads before they reach game logic. Current schemas cover join requests, WebSocket client messages, and Sudoku Lite moves.
 
-## Session token
+`RECONNECT` is intentionally simplified to:
 
-Phase 2 的 session token 用于本地重连，保存在浏览器 `sessionStorage` 中。它仍是 placeholder：没有过期、轮换、撤销和持久化策略。
+```json
+{ "type": "RECONNECT" }
+```
 
-## Guest user
+The session token remains in the WebSocket URL used to reconnect to the same session.
 
-Phase 2 没有账号系统。玩家和观战者都是临时 participant。
+## Solo Puzzle Solution Safety
 
-## 不泄露 solution
+Sudoku Lite keeps the private solution in `packages/game-definitions`. The Worker returns a public puzzle with givens and a `solutionHash` placeholder, but not the solution grid.
 
-单人 puzzle 尚未进入实现阶段。Phase 3 处理 solo puzzle 时仍然不能把明文 solution 发给前端。
+Hints return only one target cell and a short candidate list. Completion is checked server-side from puzzle plus progress.
 
-## 测试覆盖
+## Placeholder Risks
 
-隐藏信息测试位于 `packages/game-definitions/test/token-bluffing-demo.test.mjs`，覆盖：
+Phase 3 still uses local in-memory session maps. This means there is no durable auth, expiry, revocation, rate limiting, or cross-instance coordination yet. Phase 4 should move authority and persistence into Cloudflare Durable Objects and D1.
 
-- 玩家只能看到自己的 hidden token。
-- 玩家看不到其他玩家 hidden token 种类。
-- 观战者看不到任何 hidden token 种类。
-- public event 不泄露 hidden token 字段。
-- 非法 command 会被 reject。
+## Test Coverage
+
+Security-oriented tests cover:
+
+- player views do not leak other players' hidden tokens
+- spectator views do not leak hidden tokens
+- public events use `declaredToken` and do not leak hidden state
+- invalid multiplayer commands are rejected
+- public Sudoku puzzles do not contain the solution
+- locked givens and invalid Sudoku digits are rejected
+- invalid protocol shapes are rejected by schemas

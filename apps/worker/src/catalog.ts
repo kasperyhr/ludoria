@@ -10,11 +10,11 @@ export const gameCatalog: GameCatalogItem[] = [
     playerCountLabel: '2-6 players'
   },
   {
-    id: 'sudoku',
-    name: 'Sudoku',
+    id: 'sudoku-lite',
+    name: 'Sudoku Lite',
     mode: 'solo',
-    status: 'planned',
-    description: '单人数字逻辑 puzzle，占位用于后续验证题目生成、进度保存和完成检查。',
+    status: 'preview',
+    description: '4x4 单人数独 demo，用于验证 Puzzle -> Progress -> Move -> Completion。',
     playerCountLabel: 'Solo'
   },
   {

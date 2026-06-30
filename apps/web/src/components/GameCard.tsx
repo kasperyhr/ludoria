@@ -13,7 +13,11 @@ const statusLabel: Record<GameCatalogItem['status'], string> = {
 };
 
 export function GameCard({ game }: { game: GameCatalogItem }) {
-  const canOpenDemo = game.id === 'token-bluffing-demo';
+  const demoPathByGameId: Partial<Record<GameCatalogItem['id'], string>> = {
+    'token-bluffing-demo': '/demo/token-bluffing',
+    'sudoku-lite': '/demo/sudoku-lite'
+  };
+  const demoPath = demoPathByGameId[game.id];
 
   return (
     <Card className="game-card">
@@ -25,8 +29,8 @@ export function GameCard({ game }: { game: GameCatalogItem }) {
       <p>{game.description}</p>
       <div className="game-card__footer">
         <span>{game.playerCountLabel}</span>
-        {canOpenDemo ? (
-          <Button onClick={() => { window.location.href = '/demo/token-bluffing'; }}>进入 demo</Button>
+        {demoPath ? (
+          <Button onClick={() => { window.location.href = demoPath; }}>进入 demo</Button>
         ) : (
           <span>{game.id}</span>
         )}

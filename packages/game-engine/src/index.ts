@@ -58,10 +58,47 @@ export interface MultiplayerGameDefinition<
   getReviewSummary?(state: State): unknown;
 }
 
-export interface SoloPuzzleDefinition<Puzzle = unknown, Progress = unknown, Move = unknown, Completion = unknown> {
+export interface Puzzle {
+  id: string;
+  gameId: string;
+}
+
+export interface Progress {
+  updatedAt: string;
+}
+
+export interface Move {
+  row: number;
+  col: number;
+  value: unknown;
+}
+
+export interface Hint {
+  row: number;
+  col: number;
+  message: string;
+}
+
+export interface CompletionResult {
+  isComplete: boolean;
+  isSolved: boolean;
+}
+
+export interface SoloPuzzleDefinition<
+  PuzzleShape extends Puzzle = Puzzle,
+  PublicPuzzle = unknown,
+  ProgressShape extends Progress = Progress,
+  MoveShape extends Move = Move,
+  HintShape extends Hint = Hint,
+  CompletionShape extends CompletionResult = CompletionResult
+> {
   id: string;
   displayName: string;
-  createInitialProgress(puzzle: Puzzle): Progress;
-  applyMove(progress: Progress, move: Move): Result<Progress>;
-  checkCompletion(puzzle: Puzzle, progress: Progress): Completion;
+  createInitialProgress(puzzle: PuzzleShape): ProgressShape;
+  validateMove(puzzle: PuzzleShape, progress: ProgressShape, move: MoveShape): Result<MoveShape>;
+  applyMove(puzzle: PuzzleShape, progress: ProgressShape, move: MoveShape): Result<ProgressShape>;
+  checkCompletion(puzzle: PuzzleShape, progress: ProgressShape): CompletionShape;
+  getHint(puzzle: PuzzleShape, progress: ProgressShape): HintShape | null;
+  getPublicPuzzle(puzzle: PuzzleShape): PublicPuzzle;
+  getSolutionHash(puzzle: PuzzleShape): string;
 }

@@ -1,99 +1,91 @@
 # Ludoria
 
-Ludoria 是一个 Cloudflare-first 的 TypeScript monorepo，用于构建在线 Game Hub：多人桌游和单人益智游戏共存。
+Ludoria is a Cloudflare-first TypeScript monorepo for an online game hall where multiplayer board games and solo puzzle games can coexist behind shared contracts.
 
-Phase 2 在 runnable shell 上加入了最小多人隐藏信息 demo：`Token Bluffing Demo`。它用于验证服务器权威状态、WebSocket、`Command -> Validate -> Event -> State -> View` 流程，以及 `getPlayerView` / `getSpectatorView` 的安全视角投影。
+Phase 3 adds `Sudoku Lite`, a 4x4 solo puzzle demo that validates `Puzzle -> Progress -> Move -> Completion`, hinting, autosave-style progress updates, and a public puzzle representation that never exposes the full solution. Phase 2's `Token Bluffing Demo` remains in place for multiplayer hidden-information validation.
 
-## 工作区
+## Workspace
 
-- `apps/web`: Vite + React runnable shell 和 multiplayer demo UI。
-- `apps/worker`: Cloudflare Workers + Hono runnable shell、本地 session API、WebSocket 入口和 `GameSessionActor` placeholder。
-- `packages/game-engine`: 通用 multiplayer engine contract。
-- `packages/game-definitions`: `token-bluffing-demo` 最小规则实现。
-- `packages/protocol`: 前后端共享 REST/WebSocket 协议类型。
-- `packages/db`: 数据库 schema placeholder。
-- `packages/ui`: 轻量 UI primitives。
-- `packages/config`: 共享配置 placeholder。
+- `apps/web`: Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
+- `apps/worker`: Cloudflare Workers + Hono shell, session REST APIs, WebSocket entrypoint, local `GameSessionActor` placeholder, and Sudoku Lite puzzle APIs.
+- `packages/game-engine`: shared multiplayer and solo puzzle engine contracts.
+- `packages/game-definitions`: `token-bluffing-demo` and `sudoku-lite` rule implementations.
+- `packages/protocol`: shared REST/WebSocket protocol types and Valibot runtime validation.
+- `packages/db`: database schema placeholder.
+- `packages/ui`: lightweight UI primitives.
+- `packages/config`: shared config placeholder.
 
-## 安装
+## Install
 
 ```powershell
 corepack pnpm install
 ```
 
-## 本地运行
+## Local Run
 
-启动 Worker：
+Start the Worker:
 
 ```powershell
 corepack pnpm dev:worker
 ```
 
-默认地址：
+Default Worker origin:
 
 ```text
 http://127.0.0.1:8787
 ```
 
-启动 Web：
+Start the web app:
 
 ```powershell
 corepack pnpm dev:web
 ```
 
-默认地址：
+Default web origin:
 
 ```text
 http://127.0.0.1:5173
 ```
 
-Web 默认通过 Vite proxy 把 `/worker-api/*` 转发到 `http://127.0.0.1:8787/*`。WebSocket 重连默认使用：
+The web app proxies `/worker-api/*` to `http://127.0.0.1:8787/*`. WebSocket reconnection defaults to:
 
 ```text
 ws://127.0.0.1:8787
 ```
 
-可以通过 `.env` 或 shell 环境覆盖：
-
-```powershell
-$env:LUDORIA_WORKER_ORIGIN="http://127.0.0.1:8787"
-$env:VITE_LUDORIA_WORKER_API_URL="/worker-api"
-$env:VITE_LUDORIA_WORKER_WS_URL="ws://127.0.0.1:8787"
-```
-
-## 测试 API
+## API Smoke Tests
 
 ```powershell
 curl http://127.0.0.1:8787/health
 curl http://127.0.0.1:8787/api/games
 ```
 
-创建 session：
+Create a multiplayer session:
 
 ```powershell
 curl -X POST http://127.0.0.1:8787/api/sessions
 ```
 
-加入 session：
+Create a Sudoku Lite puzzle session:
 
 ```powershell
-curl -X POST http://127.0.0.1:8787/api/sessions/<sessionId>/join `
-  -H "Content-Type: application/json" `
-  -d "{\"displayName\":\"Alice\",\"role\":\"player\"}"
+curl -X POST http://127.0.0.1:8787/api/puzzles/sudoku-lite/sessions
 ```
 
-## 如何测试 Token Bluffing Demo
+Apply a Sudoku Lite move:
 
-1. 启动 Worker 和 Web。
-2. 打开 `http://127.0.0.1:5173`，在游戏目录点击 `Token Bluffing Demo`。
-3. 在第一个浏览器窗口创建 session，并作为玩家加入。
-4. 复制 session id，在第二个浏览器窗口作为另一个玩家加入。
-5. 在第三个浏览器窗口使用同一个 session id，作为观战者加入。
-6. 玩家可以看到自己的隐藏 token，但只能看到其他玩家的 token 数量。
-7. 观战者只能看到玩家列表、token 数量、公共事件和公共聊天，看不到任何隐藏 token 种类。
-8. 玩家可以提交 `DECLARE_TOKEN_COUNT`，所有连接会收到 public event 和安全视角更新。
+```powershell
+curl -X POST http://127.0.0.1:8787/api/puzzles/<sessionId>/move `
+  -H "Content-Type: application/json" `
+  -d "{\"row\":0,\"col\":1,\"value\":2}"
+```
 
-## 常用命令
+## Demo Paths
+
+- `http://127.0.0.1:5173/demo/token-bluffing`
+- `http://127.0.0.1:5173/demo/sudoku-lite`
+
+## Quality Commands
 
 ```powershell
 corepack pnpm lint
@@ -102,17 +94,14 @@ corepack pnpm test
 corepack pnpm build
 ```
 
-## 架构原则
+## Architecture Principles
 
-多人游戏遵循 `Command -> Validate -> Event -> State -> View`。完整隐藏状态只存在服务器权威状态中，前端永远只接收 `getPlayerView` 或 `getSpectatorView` 生成的视角。
+Multiplayer games follow `Command -> Validate -> Event -> State -> View`. Full hidden state stays in server-authoritative state; clients receive only role-safe views.
 
-## 仍然是 mock / placeholder 的内容
+Solo puzzles follow `Puzzle -> Progress -> Move -> Completion`. React components display public puzzle data and submit moves; puzzle rules, hinting, and completion checks live in `packages/game-definitions`.
 
-- `GameSessionActor` 是本地内存 placeholder，不是正式 Durable Object 持久化实现。
-- 没有真实账号系统、完整大厅、完整房间生命周期、胜负逻辑、D1、R2 或真实 Durable Objects 资源。
-- WebSocket protocol 只有最小 runtime validation，后续应补 Zod 或 Valibot schema。
-- `Token Bluffing Demo` 只验证隐藏信息和命令流程，不是完整桌游。
+## Still Placeholder
 
-## 下一阶段
-
-Phase 3 适合实现一个最小 solo puzzle demo，例如 Sudoku 或 Nonogram，用来验证 `Puzzle -> Progress -> Move -> Completion`、autosave、hint、completion check 和 solution hash。
+- `GameSessionActor` and Sudoku sessions are local in-memory placeholders, not Durable Objects or persistent storage.
+- There is no real account system, lobby lifecycle, match history, D1, R2, or deployed Cloudflare resource.
+- `solutionHash` is a placeholder string until persistent puzzle generation and verification are introduced.

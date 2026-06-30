@@ -11,6 +11,7 @@ import type {
   ServerToClientMessage,
   SessionRole
 } from '@ludoria/protocol';
+import { parseClientToServerMessage } from '@ludoria/protocol';
 
 interface SessionParticipant {
   actorId: string;
@@ -284,14 +285,8 @@ export class GameSessionActor {
     }
 
     try {
-      const parsed = JSON.parse(raw) as ClientToServerMessage;
-
-      if (!parsed || typeof parsed !== 'object' || typeof parsed.type !== 'string') {
-        return null;
-      }
-
-      // TODO: Replace this minimal validation with Zod or Valibot schemas when protocol hardens.
-      return parsed;
+      const result = parseClientToServerMessage(JSON.parse(raw));
+      return result.ok ? result.value : null;
     } catch {
       return null;
     }
