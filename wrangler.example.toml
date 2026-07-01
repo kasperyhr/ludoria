@@ -2,5 +2,17 @@ name = "ludoria-worker"
 main = "apps/worker/src/index.ts"
 compatibility_date = "2026-06-01"
 
-# Phase 0 only: this file documents intended local Worker shape.
-# Do not create real D1, R2, or Durable Object resources from this scaffold.
+# Phase 4A local development only.
+# This binding routes multiplayer Token Bluffing sessions into Durable Objects.
+# Do not deploy or create real Cloudflare resources from this example without
+# reviewing names, migration tags, account settings, and environment bindings.
+[[durable_objects.bindings]]
+name = "GAME_SESSION_OBJECT"
+class_name = "GameSessionObject"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["GameSessionObject"]
+
+# Future production phases may add D1/R2 bindings here.
+# Phase 4A intentionally does not configure real D1 or R2 resources.

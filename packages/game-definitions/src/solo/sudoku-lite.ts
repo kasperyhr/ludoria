@@ -187,14 +187,15 @@ export const sudokuLiteDefinition: SoloPuzzleDefinition<
 
         if (current === null) {
           const correct = getSolutionValue(puzzle, row, col);
-          const candidates = ([1, 2, 3, 4] as SudokuCellValue[])
-            .filter((value) => value === correct || value !== current)
-            .slice(0, 2);
+
+          if (correct === null) {
+            return null;
+          }
 
           return {
             row,
             col,
-            candidates,
+            candidates: [correct],
             message: `第 ${row + 1} 行第 ${col + 1} 列可以先比较所在行和 2x2 宫。`
           };
         }

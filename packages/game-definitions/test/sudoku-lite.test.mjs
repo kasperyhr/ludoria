@@ -53,5 +53,5 @@ test('hint does not return the full solution', () => {
   assert.ok(hint);
   assert.equal('solution' in hint, false);
   assert.equal(Array.isArray(hint.candidates), true);
-  assert.equal(hint.candidates.length <= 2, true);
+  assert.deepEqual(hint.candidates, [2]);
 });

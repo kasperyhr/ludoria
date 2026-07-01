@@ -1,71 +1,87 @@
 # Deployment Plan
 
-## 本地开发
+Phase 4A is local-only. Do not deploy, create real Cloudflare resources, modify DNS, or create paid resources for this phase.
 
-安装依赖：
+## Local Development
+
+Install dependencies:
 
 ```powershell
 corepack pnpm install
 ```
 
-启动 Worker：
+Start the Worker with local Durable Object support:
 
 ```powershell
 corepack pnpm dev:worker
 ```
 
-启动 Web：
+Start the web app:
 
 ```powershell
 corepack pnpm dev:web
 ```
 
-也可以同时启动：
+You can also start both:
 
 ```powershell
 corepack pnpm dev
 ```
 
-## 本地联调
+## Local Origins
 
-Worker 默认运行在：
+Worker:
 
 ```text
 http://127.0.0.1:8787
 ```
 
-Web 默认运行在：
+Web:
 
 ```text
 http://127.0.0.1:5173
 ```
 
-Web 使用 Vite proxy 将 `/worker-api/*` 转发到本地 Worker。可以通过 `LUDORIA_WORKER_ORIGIN` 改写 proxy target，也可以通过 `VITE_LUDORIA_WORKER_API_URL` 改写前端请求 base URL。
+The web app uses the Vite proxy to send `/worker-api/*` to the local Worker.
 
-## 测试 health API
+## Health Check
 
 ```powershell
 curl http://127.0.0.1:8787/health
 ```
 
-预期返回：
+Expected phase:
 
 ```json
 {
   "ok": true,
   "service": "ludoria-worker",
-  "phase": "phase-1"
+  "phase": "phase-4a"
 }
 ```
 
-## Wrangler
+## Durable Object Local Binding
 
-`apps/worker/wrangler.toml` 仅用于本地 Worker runnable shell。根目录 `wrangler.example.toml` 记录未来配置形状。
+`apps/worker/wrangler.toml` configures one local Durable Object binding used by `corepack pnpm dev:worker`:
 
-## 未来 Cloudflare 部署步骤
+```toml
+[[durable_objects.bindings]]
+name = "GAME_SESSION_OBJECT"
+class_name = "GameSessionObject"
+```
 
-后续阶段再创建 D1、R2、Durable Objects 绑定，配置环境变量，运行 migrations，然后部署 Worker 和前端资源。
+This lets `wrangler dev` route multiplayer sessions through `GameSessionObject`. It does not create a real production Durable Object resource until someone explicitly deploys.
 
-## 当前限制
+## Example Config
 
-现在不要部署，不创建真实 Cloudflare 资源，不修改 DNS，不创建付费资源。
+The root `wrangler.example.toml` mirrors the local shape and documents what must be reviewed before a real deployment: names, migration tags, account settings, environment bindings, and future D1/R2 resources.
+
+## Future Cloudflare Deployment Steps
+
+Phase 4B or later should:
+
+- decide Durable Object storage snapshot strategy
+- add D1 schema and migrations for session metadata
+- define production environment bindings
+- add Wrangler deployment checks
+- document rollback and migration practices

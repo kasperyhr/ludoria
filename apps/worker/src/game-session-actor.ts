@@ -292,16 +292,3 @@ export class GameSessionActor {
     }
   }
 }
-
-const sessions = new Map<string, GameSessionActor>();
-
-export function createGameSessionActor() {
-  const sessionId = `session-${crypto.randomUUID()}`;
-  const actor = new GameSessionActor(sessionId);
-  sessions.set(sessionId, actor);
-  return actor;
-}
-
-export function getGameSessionActor(sessionId: string) {
-  return sessions.get(sessionId);
-}

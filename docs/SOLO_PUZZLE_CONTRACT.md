@@ -42,7 +42,7 @@ Sudoku Lite rejects:
 
 ## Hinting
 
-Hints return one target cell and a small candidate list. They must not return the full solution or enough structured data to reconstruct it directly.
+Phase 4A Sudoku Lite hints return one target cell and a single candidate for the current demo. They must not return the full solution or enough structured data to reconstruct it directly.
 
 ## Completion
 

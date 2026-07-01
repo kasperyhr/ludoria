@@ -2,18 +2,26 @@
 
 Ludoria is a Cloudflare-first TypeScript monorepo for an online game hall where multiplayer board games and solo puzzle games can coexist behind shared contracts.
 
-Phase 3 adds `Sudoku Lite`, a 4x4 solo puzzle demo that validates `Puzzle -> Progress -> Move -> Completion`, hinting, autosave-style progress updates, and a public puzzle representation that never exposes the full solution. Phase 2's `Token Bluffing Demo` remains in place for multiplayer hidden-information validation.
+Phase 4A migrates the multiplayer `Token Bluffing Demo` from a Worker-global in-memory session map to a local Cloudflare Durable Object architecture:
+
+```text
+sessionId -> Durable Object id -> GameSessionObject
+```
+
+This phase is local-only. It is meant to validate the Durable Object runtime boundary with `wrangler dev`; it does not deploy, create real Cloudflare resources, or add D1/R2 persistence. `Sudoku Lite` remains a solo puzzle memory placeholder.
 
 ## Workspace
 
 - `apps/web`: Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
-- `apps/worker`: Cloudflare Workers + Hono shell, session REST APIs, WebSocket entrypoint, local `GameSessionActor` placeholder, and Sudoku Lite puzzle APIs.
+- `apps/worker`: Cloudflare Workers + Hono shell, split route modules, `GameSessionObject` Durable Object, and local Sudoku Lite puzzle APIs.
 - `packages/game-engine`: shared multiplayer and solo puzzle engine contracts.
 - `packages/game-definitions`: `token-bluffing-demo` and `sudoku-lite` rule implementations.
 - `packages/protocol`: shared REST/WebSocket protocol types and Valibot runtime validation.
 - `packages/db`: database schema placeholder.
 - `packages/ui`: lightweight UI primitives.
 - `packages/config`: shared config placeholder.
+
+Valibot is used for the minimal runtime schemas because it is lightweight and sufficient for Phase 4A transport validation without adding a heavier dependency.
 
 ## Install
 
@@ -23,7 +31,7 @@ corepack pnpm install
 
 ## Local Run
 
-Start the Worker:
+Start the Worker with local Durable Object support:
 
 ```powershell
 corepack pnpm dev:worker
@@ -60,10 +68,26 @@ curl http://127.0.0.1:8787/health
 curl http://127.0.0.1:8787/api/games
 ```
 
-Create a multiplayer session:
+Create a multiplayer Durable Object session:
 
 ```powershell
 curl -X POST http://127.0.0.1:8787/api/sessions
+```
+
+Join as a player:
+
+```powershell
+curl -X POST http://127.0.0.1:8787/api/sessions/<sessionId>/join `
+  -H "Content-Type: application/json" `
+  -d "{\"displayName\":\"Alice\",\"role\":\"player\"}"
+```
+
+Join as a spectator:
+
+```powershell
+curl -X POST http://127.0.0.1:8787/api/sessions/<sessionId>/join `
+  -H "Content-Type: application/json" `
+  -d "{\"displayName\":\"Watcher\",\"role\":\"spectator\"}"
 ```
 
 Create a Sudoku Lite puzzle session:
@@ -96,12 +120,13 @@ corepack pnpm build
 
 ## Architecture Principles
 
-Multiplayer games follow `Command -> Validate -> Event -> State -> View`. Full hidden state stays in server-authoritative state; clients receive only role-safe views.
+Multiplayer games follow `Command -> Validate -> Event -> State -> View`. Full hidden state stays inside the server-authoritative session object; clients receive only role-safe views from `getPlayerView` or `getSpectatorView`.
 
 Solo puzzles follow `Puzzle -> Progress -> Move -> Completion`. React components display public puzzle data and submit moves; puzzle rules, hinting, and completion checks live in `packages/game-definitions`.
 
 ## Still Placeholder
 
-- `GameSessionActor` and Sudoku sessions are local in-memory placeholders, not Durable Objects or persistent storage.
+- `GameSessionObject` currently stores Token Bluffing state in Durable Object instance memory. This validates the runtime boundary, not final persistence.
+- Sudoku Lite sessions remain a Worker-local memory placeholder.
 - There is no real account system, lobby lifecycle, match history, D1, R2, or deployed Cloudflare resource.
 - `solutionHash` is a placeholder string until persistent puzzle generation and verification are introduced.

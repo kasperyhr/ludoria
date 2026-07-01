@@ -1,6 +1,12 @@
 # Security Model
 
-Ludoria treats the frontend as untrusted. UI state and disabled buttons are convenience only; Worker endpoints and game definitions must validate all meaningful input.
+Ludoria treats the frontend as untrusted. UI state and disabled buttons are convenience only; Worker endpoints, Durable Objects, and game definitions must validate all meaningful input.
+
+## Durable Object Authority
+
+Phase 4A moves Token Bluffing authority into `GameSessionObject`. The Worker routes requests to a per-session Durable Object; the DO owns participants, session tokens, WebSocket connections, chat, commands, and authoritative game state.
+
+This is a runtime boundary validation, not final persistence. State is still stored in DO instance memory for now.
 
 ## Hidden Multiplayer Information
 
@@ -15,7 +21,7 @@ Ludoria treats the frontend as untrusted. UI state and disabled buttons are conv
 
 `getSpectatorView` must not include any `hiddenTokens` field.
 
-Public events may include what a player declared, using `declaredToken`, but must not include the player's real hidden token list.
+Public events may include what a player declared, using `declaredToken` and `declaredCount`, but must not include the player's real hidden token list.
 
 ## Runtime Protocol Validation
 
@@ -27,17 +33,17 @@ Public events may include what a player declared, using `declaredToken`, but mus
 { "type": "RECONNECT" }
 ```
 
-The session token remains in the WebSocket URL used to reconnect to the same session.
+The session token remains in the WebSocket URL used to connect to the same session.
 
 ## Solo Puzzle Solution Safety
 
 Sudoku Lite keeps the private solution in `packages/game-definitions`. The Worker returns a public puzzle with givens and a `solutionHash` placeholder, but not the solution grid.
 
-Hints return only one target cell and a short candidate list. Completion is checked server-side from puzzle plus progress.
+Hints return one target cell and a single candidate for the current demo. They still do not return the full solution. Completion is checked server-side from puzzle plus progress.
 
 ## Placeholder Risks
 
-Phase 3 still uses local in-memory session maps. This means there is no durable auth, expiry, revocation, rate limiting, or cross-instance coordination yet. Phase 4 should move authority and persistence into Cloudflare Durable Objects and D1.
+Phase 4A still lacks durable auth, expiry, revocation, rate limiting, account identity, match history, and persisted recovery after DO instance eviction. Phase 4B should decide which data belongs in Durable Object storage and which belongs in D1.
 
 ## Test Coverage
 

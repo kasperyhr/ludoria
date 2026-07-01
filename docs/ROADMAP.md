@@ -12,7 +12,7 @@ Make the web and Worker apps run locally with basic navigation, a health API, a 
 
 Implement `Token Bluffing Demo` to validate:
 
-- local `GameSessionActor` placeholder
+- local session actor shape
 - WebSocket session flow
 - command validation
 - public events
@@ -32,16 +32,29 @@ Implemented `Sudoku Lite` to validate:
 - completion check endpoint
 - minimal protocol runtime validation with Valibot
 
-## Phase 4: Cloudflare Integration
+## Phase 4A: Durable Object Runtime Boundary
 
-Move local placeholders toward production Cloudflare primitives:
+Migrate multiplayer Token Bluffing sessions from a Worker-global memory map to `GameSessionObject` Durable Objects for local `wrangler dev`.
 
-- migrate `GameSessionActor` to Durable Objects
-- persist puzzle progress and session metadata in Durable Objects and/or D1
-- introduce migration-ready D1 schema
-- add Wrangler deployment workflow
-- define real environment bindings and secrets strategy
-- decide where R2 is needed for assets, logs, or generated content
+Validated goals:
+
+- deterministic `sessionId -> Durable Object id` routing
+- per-session authoritative multiplayer state
+- WebSocket connect through Durable Object
+- heartbeat, chat, submit command, and reconnect snapshot still handled by the session object
+- Sudoku Lite remains a local solo puzzle placeholder
+
+Phase 4A does not deploy and does not create real Cloudflare resources.
+
+## Phase 4B: Durable Persistence Design
+
+Recommended next step:
+
+- add minimal Durable Object storage snapshots for multiplayer session recovery
+- decide D1 schema for lobby/session metadata
+- document session expiry and token revocation
+- add stronger local DO integration tests
+- keep D1/R2 bindings out until there is a clear migration plan
 
 ## Phase 5: Polish UI
 

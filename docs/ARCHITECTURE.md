@@ -2,13 +2,31 @@
 
 Ludoria is a Cloudflare-first TypeScript monorepo. The web shell lives in `apps/web`, the Worker/BFF lives in `apps/worker`, and shared contracts live in `packages/*`.
 
-## Current Shape
+## Phase 4A Shape
 
 - `apps/web`: React UI for the game catalog, Token Bluffing Demo, and Sudoku Lite.
-- `apps/worker`: Hono Worker with REST endpoints, a WebSocket endpoint, local multiplayer sessions, and local Sudoku puzzle sessions.
+- `apps/worker`: Hono Worker with split route modules, a `GameSessionObject` Durable Object, and local Sudoku puzzle sessions.
 - `packages/game-engine`: framework-neutral multiplayer and solo puzzle contracts.
 - `packages/game-definitions`: concrete game rules for `token-bluffing-demo` and `sudoku-lite`.
-- `packages/protocol`: shared protocol types plus Valibot runtime validation.
+- `packages/protocol`: shared protocol types plus lightweight Valibot runtime validation.
+
+## Durable Object Session Routing
+
+Phase 4A routes multiplayer sessions deterministically:
+
+```text
+sessionId -> env.GAME_SESSION_OBJECT.idFromName(sessionId) -> GameSessionObject
+```
+
+The public Worker routes stay stable:
+
+```text
+POST /api/sessions
+POST /api/sessions/:sessionId/join
+GET  /api/sessions/:sessionId/connect
+```
+
+The route module forwards each request to the matching Durable Object. The Worker no longer keeps a global `Map<string, GameSessionActor>` for multiplayer sessions.
 
 ## Multiplayer Flow
 
@@ -17,6 +35,7 @@ Token Bluffing follows:
 ```text
 Client command
   -> protocol schema parse
+  -> GameSessionObject
   -> game definition validation
   -> public event
   -> authoritative state update
@@ -24,21 +43,23 @@ Client command
   -> WebSocket update
 ```
 
-React does not implement game rules. Worker route handlers and WebSocket handlers parse protocol input and delegate rule decisions to `packages/game-definitions`.
+React does not implement game rules. Worker route handlers do routing and protocol boundaries; game rules remain in `packages/game-definitions`.
+
+## Durable Object Persistence Status
+
+`GameSessionObject` stores state in Durable Object instance memory for Phase 4A. This validates Cloudflare's runtime boundary, WebSocket routing, and per-session authority. It is not the final persistence implementation.
+
+Phase 4B should evaluate Durable Object storage snapshots and D1 metadata persistence.
 
 ## Solo Puzzle Flow
 
-Sudoku Lite follows:
+Sudoku Lite still follows:
 
 ```text
-Puzzle
-  -> Progress
-  -> Move
-  -> Progress
-  -> Hint / Completion check
+Puzzle -> Progress -> Move -> Completion
 ```
 
-The public puzzle includes givens, board metadata, and a solution hash placeholder. It does not include the solution grid. Progress is updated through Worker endpoints and returned as a public progress view.
+Sudoku sessions remain local Worker memory placeholders in Phase 4A. The public puzzle includes givens, board metadata, and a solution hash placeholder. It does not include the solution grid.
 
 ## Runtime Validation
 
@@ -48,23 +69,8 @@ The public puzzle includes givens, board metadata, and a solution hash placehold
 - WebSocket client messages
 - Sudoku Lite move bodies
 
-Invalid protocol input returns `INVALID_MESSAGE` instead of flowing into game logic as unchecked casts.
-
-## Phase 3 Data Flow
-
-```text
-apps/web
-  -> REST /worker-api/api/games
-  -> REST /worker-api/api/sessions
-  -> REST /worker-api/api/puzzles/sudoku-lite/sessions
-  -> REST /worker-api/api/puzzles/:sessionId/move
-  -> REST /worker-api/api/puzzles/:sessionId/hint
-  -> REST /worker-api/api/puzzles/:sessionId/check
-  -> WebSocket /api/sessions/:sessionId/connect
-  -> local in-memory Worker state
-  -> packages/game-definitions rules
-```
+Valibot was chosen because it is lightweight and enough for the current transport boundary without adding unnecessary dependency weight.
 
 ## Cloudflare Target
 
-The target runtime remains Workers, Durable Objects, D1, and R2. Phase 3 intentionally does not create or deploy real Cloudflare resources. Local in-memory state is a proving ground for API shape and trust boundaries before Phase 4 persistence and coordination work.
+The target runtime remains Workers, Durable Objects, D1, and R2. Phase 4A intentionally runs only in local `wrangler dev`; it does not deploy or create real Cloudflare resources.

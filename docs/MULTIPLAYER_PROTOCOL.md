@@ -1,16 +1,26 @@
 # Multiplayer Protocol
 
-Phase 2 补齐了最小 WebSocket 协议类型。类型定义位于 `packages/protocol`，web 和 worker 必须共享引用，不允许重复定义。
+Multiplayer protocol types live in `packages/protocol`. Web and Worker code must import shared types from that package instead of redefining request or WebSocket shapes locally.
+
+## Durable Object Routing
+
+Phase 4A routes every Token Bluffing session to a deterministic Durable Object:
+
+```text
+sessionId -> GAME_SESSION_OBJECT.idFromName(sessionId) -> GameSessionObject
+```
+
+The Worker route module owns public HTTP paths. The Durable Object owns authoritative session state, participant tokens, WebSocket connections, command handling, chat, heartbeat, and reconnect snapshots.
 
 ## REST
 
 ### POST /api/sessions
 
-创建 `token-bluffing-demo` session。
+Creates a `token-bluffing-demo` session and initializes a `GameSessionObject`.
 
 ### POST /api/sessions/:sessionId/join
 
-请求体：
+Request body:
 
 ```json
 {
@@ -19,29 +29,33 @@ Phase 2 补齐了最小 WebSocket 协议类型。类型定义位于 `packages/pr
 }
 ```
 
-`role` 可以是 `player` 或 `spectator`。返回 `sessionToken` 和 WebSocket URL。
+`role` can be `player` or `spectator`. The response includes `sessionToken` and a WebSocket URL.
 
 ### GET /api/sessions/:sessionId/connect
 
-使用 `token` query 参数升级为 WebSocket。
+Uses the `token` query parameter to upgrade to WebSocket. The token is issued by the join endpoint.
 
 ## Client to Server
 
-- `JOIN_SESSION`: 保留给 WebSocket 内部加入流程。
-- `RECONNECT`: 使用 session token 重新获取 snapshot。
-- `SUBMIT_COMMAND`: 提交 `DECLARE_TOKEN_COUNT`。
-- `CHAT_MESSAGE`: 公共聊天。
-- `HEARTBEAT`: 保持连接并请求 snapshot。
+- `JOIN_SESSION`: retained for internal protocol compatibility; current join flow is REST-first.
+- `RECONNECT`: simplified to `{ "type": "RECONNECT" }`; the WebSocket URL already carries the session token.
+- `SUBMIT_COMMAND`: submits `DECLARE_TOKEN_COUNT`.
+- `CHAT_MESSAGE`: sends public chat.
+- `HEARTBEAT`: requests a fresh snapshot.
 
 ## Server to Client
 
-- `SESSION_SNAPSHOT`: 连接后发送初始安全视角。
-- `PLAYER_VIEW_UPDATE`: 发送给玩家的安全视角。
-- `SPECTATOR_VIEW_UPDATE`: 发送给观战者的安全视角。
-- `PUBLIC_EVENT`: 不含隐藏 token 的公共事件。
-- `CHAT_MESSAGE`: 公共聊天消息。
-- `ERROR`: 协议或命令错误。
+- `SESSION_SNAPSHOT`: initial safe view after connect or reconnect.
+- `PLAYER_VIEW_UPDATE`: safe player view.
+- `SPECTATOR_VIEW_UPDATE`: safe spectator view.
+- `PUBLIC_EVENT`: public event without hidden token state.
+- `CHAT_MESSAGE`: public chat message.
+- `ERROR`: protocol or command error.
 
 ## Validation
 
-Phase 2 只有最小 runtime validation：检查消息可解析、类型存在、join body 基本合法。后续应补 Zod 或 Valibot schema，并让测试覆盖 schema 与 TypeScript 类型的一致性。
+Valibot schemas in `packages/protocol` validate join bodies and WebSocket client messages. Invalid payloads become `ApiError` responses or WebSocket `ERROR` messages before reaching game logic.
+
+## Hidden Information
+
+`GameSessionObject` continues to use `getPlayerView` and `getSpectatorView`. Full `TokenBluffingState` must never be serialized to the frontend.
