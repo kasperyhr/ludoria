@@ -10,7 +10,7 @@ Phase 4A routes every Token Bluffing session to a deterministic Durable Object:
 sessionId -> GAME_SESSION_OBJECT.idFromName(sessionId) -> GameSessionObject
 ```
 
-The Worker route module owns public HTTP paths. The Durable Object owns authoritative session state, participant tokens, WebSocket connections, command handling, chat, heartbeat, and reconnect snapshots.
+The Worker route module owns public HTTP paths. The Durable Object owns authoritative session state, participant token hashes, WebSocket connections, command handling, chat, heartbeat, and reconnect snapshots.
 
 ## REST
 
@@ -59,3 +59,9 @@ Valibot schemas in `packages/protocol` validate join bodies and WebSocket client
 ## Hidden Information
 
 `GameSessionObject` continues to use `getPlayerView` and `getSpectatorView`. Full `TokenBluffingState` must never be serialized to the frontend.
+
+## Snapshot Recovery
+
+Phase 4B stores a minimal Durable Object snapshot at `session:snapshot`. The snapshot stores authoritative game state, participant records, token hashes, token expiry, optional revocation time, and recent chat messages.
+
+The snapshot does not store raw session tokens. On connect, the Durable Object hashes the token from the WebSocket URL and matches it against the stored hash. Expired or revoked tokens return `UNAUTHORIZED` before WebSocket upgrade.

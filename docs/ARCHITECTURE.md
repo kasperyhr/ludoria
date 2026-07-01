@@ -2,10 +2,10 @@
 
 Ludoria is a Cloudflare-first TypeScript monorepo. The web shell lives in `apps/web`, the Worker/BFF lives in `apps/worker`, and shared contracts live in `packages/*`.
 
-## Phase 4A Shape
+## Phase 4B Shape
 
 - `apps/web`: React UI for the game catalog, Token Bluffing Demo, and Sudoku Lite.
-- `apps/worker`: Hono Worker with split route modules, a `GameSessionObject` Durable Object, and local Sudoku puzzle sessions.
+- `apps/worker`: Hono Worker with split route modules, a `GameSessionObject` Durable Object, a `session:snapshot` storage key, and local Sudoku puzzle sessions.
 - `packages/game-engine`: framework-neutral multiplayer and solo puzzle contracts.
 - `packages/game-definitions`: concrete game rules for `token-bluffing-demo` and `sudoku-lite`.
 - `packages/protocol`: shared protocol types plus lightweight Valibot runtime validation.
@@ -47,9 +47,21 @@ React does not implement game rules. Worker route handlers do routing and protoc
 
 ## Durable Object Persistence Status
 
-`GameSessionObject` stores state in Durable Object instance memory for Phase 4A. This validates Cloudflare's runtime boundary, WebSocket routing, and per-session authority. It is not the final persistence implementation.
+`GameSessionObject` keeps live WebSocket connections in instance memory, but persists a minimal `session:snapshot` in Durable Object storage after create, join, chat, command, connect, and disconnect state changes.
 
-Phase 4B should evaluate Durable Object storage snapshots and D1 metadata persistence.
+The snapshot contains:
+
+- `version`
+- `sessionId`
+- `gameId`
+- server-authoritative Token Bluffing state
+- participant records with token hashes and expiry
+- recent chat messages
+- `createdAt` and `updatedAt`
+
+The snapshot does not contain raw session tokens, account metadata, D1-style lobby metadata, WebSocket objects, or platform-level analytics.
+
+Phase 4C should decide how much recovery policy belongs in Durable Object storage versus future D1 metadata.
 
 ## Solo Puzzle Flow
 

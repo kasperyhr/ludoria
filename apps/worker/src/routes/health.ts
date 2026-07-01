@@ -8,7 +8,7 @@ healthRoutes.get('/health', (c) => {
   const response: HealthResponse = {
     ok: true,
     service: 'ludoria-worker',
-    phase: 'phase-4a'
+    phase: 'phase-4b'
   };
 
   return c.json(response);

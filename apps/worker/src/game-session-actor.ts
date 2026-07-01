@@ -12,12 +12,32 @@ import type {
   SessionRole
 } from '@ludoria/protocol';
 import { parseClientToServerMessage } from '@ludoria/protocol';
+import type { GameSessionSnapshot, GameSessionSnapshotParticipant } from './session-snapshot';
+import { isParticipantTokenActive, trimChatMessages } from './session-snapshot';
 
-interface SessionParticipant {
+interface SessionParticipant extends GameSessionSnapshotParticipant {}
+
+interface SessionTokenCredential {
+  sessionToken: string;
+  sessionTokenHash: string;
+  tokenExpiresAt: string;
+}
+
+interface GameSessionActorOptions {
+  onChange?: (actor: GameSessionActor) => void;
+}
+
+interface GameSessionActorSnapshotOptions extends GameSessionActorOptions {
+  snapshot: GameSessionSnapshot;
+}
+
+interface SessionParticipantInput {
   actorId: string;
   displayName: string;
   role: SessionRole;
-  sessionToken: string;
+  sessionTokenHash: string;
+  tokenExpiresAt: string;
+  revokedAt?: string;
 }
 
 interface Connection {
@@ -30,27 +50,40 @@ export class GameSessionActor {
   readonly sessionId: string;
   private state: TokenBluffingState;
   private readonly participants = new Map<string, SessionParticipant>();
-  private readonly tokenToActorId = new Map<string, string>();
+  private readonly tokenHashToActorId = new Map<string, string>();
   private readonly connections = new Map<WebSocket, Connection>();
   private readonly chatMessages: ChatMessage[] = [];
+  private readonly onChange?: (actor: GameSessionActor) => void;
 
-  constructor(sessionId: string) {
+  constructor(sessionId: string, options: GameSessionActorOptions = {}) {
     this.sessionId = sessionId;
     this.state = tokenBluffingDemoDefinition.setup(sessionId);
+    this.onChange = options.onChange;
   }
 
-  join(displayName: string, role: SessionRole): JoinSessionResponse {
+  static fromSnapshot({ snapshot, onChange }: GameSessionActorSnapshotOptions) {
+    const actor = new GameSessionActor(snapshot.sessionId, { onChange });
+    actor.state = snapshot.state;
+
+    for (const participant of snapshot.participants) {
+      actor.addParticipant(participant);
+    }
+
+    actor.chatMessages.push(...trimChatMessages(snapshot.chatMessages));
+    return actor;
+  }
+
+  join(displayName: string, role: SessionRole, credential: SessionTokenCredential): JoinSessionResponse {
     const actorId = `${role}-${crypto.randomUUID()}`;
-    const sessionToken = crypto.randomUUID();
     const participant: SessionParticipant = {
       actorId,
       displayName,
       role,
-      sessionToken
+      sessionTokenHash: credential.sessionTokenHash,
+      tokenExpiresAt: credential.tokenExpiresAt
     };
 
-    this.participants.set(actorId, participant);
-    this.tokenToActorId.set(sessionToken, actorId);
+    this.addParticipant(participant);
 
     if (role === 'player') {
       const player = createTokenBluffingPlayer(Object.keys(this.state.players).length, actorId, displayName);
@@ -60,31 +93,27 @@ export class GameSessionActor {
       this.broadcastViews();
     }
 
+    this.notifyChange();
+
     return {
       sessionId: this.sessionId,
       role,
       actorId,
-      sessionToken,
-      websocketUrl: `/api/sessions/${this.sessionId}/connect?token=${encodeURIComponent(sessionToken)}`
+      sessionToken: credential.sessionToken,
+      websocketUrl: `/api/sessions/${this.sessionId}/connect?token=${encodeURIComponent(credential.sessionToken)}`
     };
   }
 
-  connect(socket: WebSocket, sessionToken: string) {
-    const actorId = this.tokenToActorId.get(sessionToken);
+  connect(socket: WebSocket, sessionTokenHash: string) {
+    const tokenValidation = this.validateConnectionToken(sessionTokenHash);
 
-    if (!actorId) {
-      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: 'Invalid session token.' });
-      socket.close(1008, 'Invalid session token');
+    if (!tokenValidation.ok) {
+      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: tokenValidation.message });
+      socket.close(1008, tokenValidation.message);
       return;
     }
 
-    const participant = this.participants.get(actorId);
-
-    if (!participant) {
-      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: 'Participant not found.' });
-      socket.close(1008, 'Participant not found');
-      return;
-    }
+    const { actorId, participant } = tokenValidation;
 
     if (participant.role === 'player' && this.state.players[actorId]) {
       this.state = {
@@ -98,6 +127,7 @@ export class GameSessionActor {
         },
         updatedAt: new Date().toISOString()
       };
+      this.notifyChange();
     }
 
     this.connections.set(socket, {
@@ -111,6 +141,53 @@ export class GameSessionActor {
     socket.addEventListener('error', () => this.disconnect(socket));
 
     this.sendSnapshot(socket);
+  }
+
+  toSnapshot(now = new Date()): GameSessionSnapshot {
+    return {
+      version: 1,
+      sessionId: this.sessionId,
+      gameId: 'token-bluffing-demo',
+      state: this.state,
+      participants: [...this.participants.values()],
+      chatMessages: trimChatMessages(this.chatMessages),
+      createdAt: this.state.createdAt,
+      updatedAt: now.toISOString()
+    };
+  }
+
+  revokeParticipantToken(actorId: string, revokedAt = new Date().toISOString()) {
+    const participant = this.participants.get(actorId);
+
+    if (!participant || participant.revokedAt) {
+      return false;
+    }
+
+    participant.revokedAt = revokedAt;
+    this.notifyChange();
+    return true;
+  }
+
+  validateConnectionToken(sessionTokenHash: string, now = new Date()):
+    | { ok: true; actorId: string; participant: SessionParticipant }
+    | { ok: false; message: string } {
+    const actorId = this.tokenHashToActorId.get(sessionTokenHash);
+
+    if (!actorId) {
+      return { ok: false, message: 'Invalid session token.' };
+    }
+
+    const participant = this.participants.get(actorId);
+
+    if (!participant) {
+      return { ok: false, message: 'Participant not found.' };
+    }
+
+    if (!isParticipantTokenActive(participant, now)) {
+      return { ok: false, message: 'Session token expired or revoked.' };
+    }
+
+    return { ok: true, actorId, participant };
   }
 
   private handleMessage(socket: WebSocket, raw: unknown) {
@@ -176,6 +253,7 @@ export class GameSessionActor {
     this.state = result.value.state;
     this.broadcastPublicEvent(result.value.event);
     this.broadcastViews();
+    this.notifyChange();
   }
 
   private handleChatMessage(connection: Connection, text: string) {
@@ -195,6 +273,7 @@ export class GameSessionActor {
 
     this.chatMessages.push(message);
     this.broadcast({ type: 'CHAT_MESSAGE', message });
+    this.notifyChange();
   }
 
   private disconnect(socket: WebSocket) {
@@ -220,6 +299,7 @@ export class GameSessionActor {
     };
 
     this.broadcastViews();
+    this.notifyChange();
   }
 
   private sendSnapshot(socket: WebSocket) {
@@ -290,5 +370,14 @@ export class GameSessionActor {
     } catch {
       return null;
     }
+  }
+
+  private addParticipant(participant: SessionParticipantInput) {
+    this.participants.set(participant.actorId, { ...participant });
+    this.tokenHashToActorId.set(participant.sessionTokenHash, participant.actorId);
+  }
+
+  private notifyChange() {
+    this.onChange?.(this);
   }
 }

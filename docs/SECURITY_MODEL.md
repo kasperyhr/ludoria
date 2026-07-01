@@ -4,9 +4,21 @@ Ludoria treats the frontend as untrusted. UI state and disabled buttons are conv
 
 ## Durable Object Authority
 
-Phase 4A moves Token Bluffing authority into `GameSessionObject`. The Worker routes requests to a per-session Durable Object; the DO owns participants, session tokens, WebSocket connections, chat, commands, and authoritative game state.
+Phase 4B keeps Token Bluffing authority in `GameSessionObject`. The Worker routes requests to a per-session Durable Object; the DO owns participants, WebSocket connections, chat, commands, and authoritative game state.
 
-This is a runtime boundary validation, not final persistence. State is still stored in DO instance memory for now.
+Live WebSocket connections remain instance-memory only. Recoverable session data is stored in a Durable Object `session:snapshot`.
+
+## Session Token Lifecycle
+
+Join creates a random guest `sessionToken` and returns it to the client once. The snapshot stores only a SHA-256 hash of that token.
+
+Participant token records include:
+
+- `sessionTokenHash`
+- `tokenExpiresAt`
+- optional `revokedAt`
+
+Tokens expire after 24 hours. Expired or revoked tokens are rejected before WebSocket upgrade. `GameSessionActor` includes a minimal revoke method for future account/session management, but Phase 4B does not add a user-facing revoke UI.
 
 ## Hidden Multiplayer Information
 
@@ -43,7 +55,7 @@ Hints return one target cell and a single candidate for the current demo. They s
 
 ## Placeholder Risks
 
-Phase 4A still lacks durable auth, expiry, revocation, rate limiting, account identity, match history, and persisted recovery after DO instance eviction. Phase 4B should decide which data belongs in Durable Object storage and which belongs in D1.
+Phase 4B still lacks durable auth, account identity, match history, rate limiting, and a production session recovery policy. It intentionally does not add D1. Future phases should decide which platform-level metadata belongs in D1 instead of the per-session snapshot.
 
 ## Test Coverage
 

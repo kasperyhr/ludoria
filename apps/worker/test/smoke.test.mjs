@@ -22,3 +22,12 @@ test('worker exports GameSessionObject for Wrangler binding', () => {
 
   assert.match(source, /export \{ GameSessionObject \}/);
 });
+
+test('GameSessionObject reads and writes the session snapshot key', () => {
+  const source = readFileSync(resolve(workerRoot, 'src/durable-objects/GameSessionObject.ts'), 'utf8');
+
+  assert.match(source, /SESSION_SNAPSHOT_KEY/);
+  assert.match(source, /state\.storage\.get<GameSessionSnapshot>/);
+  assert.match(source, /state\.storage\.put\(SESSION_SNAPSHOT_KEY/);
+  assert.match(source, /hashSessionToken/);
+});

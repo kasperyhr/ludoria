@@ -56,7 +56,7 @@ Expected phase:
 {
   "ok": true,
   "service": "ludoria-worker",
-  "phase": "phase-4a"
+  "phase": "phase-4b"
 }
 ```
 
@@ -72,15 +72,28 @@ class_name = "GameSessionObject"
 
 This lets `wrangler dev` route multiplayer sessions through `GameSessionObject`. It does not create a real production Durable Object resource until someone explicitly deploys.
 
+Phase 4B uses Durable Object storage locally through the `session:snapshot` key. No D1 or R2 binding is configured.
+
+## Local Recovery Smoke
+
+Manual recovery validation should cover:
+
+1. Create a Token Bluffing session.
+2. Join a player and spectator.
+3. Connect both WebSockets and confirm `SESSION_SNAPSHOT`.
+4. Submit `DECLARE_TOKEN_COUNT`.
+5. Confirm spectator payload contains `declaredToken` and no `hiddenTokens`.
+6. Confirm tests cover snapshot serialization, token hashes, token expiry, and revoked-token behavior.
+
 ## Example Config
 
 The root `wrangler.example.toml` mirrors the local shape and documents what must be reviewed before a real deployment: names, migration tags, account settings, environment bindings, and future D1/R2 resources.
 
 ## Future Cloudflare Deployment Steps
 
-Phase 4B or later should:
+Phase 4C or later should:
 
-- decide Durable Object storage snapshot strategy
+- decide whether to move platform metadata to D1
 - add D1 schema and migrations for session metadata
 - define production environment bindings
 - add Wrangler deployment checks

@@ -23,7 +23,7 @@ export interface GameCatalogItem {
 export interface HealthResponse {
   ok: true;
   service: 'ludoria-worker';
-  phase: 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4a';
+  phase: 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4a' | 'phase-4b';
 }
 
 export interface ApiError {

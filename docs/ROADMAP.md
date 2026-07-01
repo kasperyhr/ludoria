@@ -46,15 +46,28 @@ Validated goals:
 
 Phase 4A does not deploy and does not create real Cloudflare resources.
 
-## Phase 4B: Durable Persistence Design
+## Phase 4B: Durable Object Session Snapshots
+
+Implemented local Durable Object storage snapshots for Token Bluffing sessions:
+
+- `session:snapshot` with versioned authoritative game state
+- participant token hashes instead of raw tokens
+- 24-hour guest token expiry
+- optional revoked token field and actor revoke method
+- recent chat message trimming
+- snapshot serialization/restoration tests
+
+Phase 4B still does not deploy, create D1/R2 resources, or add a complete account system.
+
+## Phase 4C: Recovery Policy and Metadata Boundaries
 
 Recommended next step:
 
-- add minimal Durable Object storage snapshots for multiplayer session recovery
+- define production recovery semantics after DO eviction
 - decide D1 schema for lobby/session metadata
-- document session expiry and token revocation
-- add stronger local DO integration tests
-- keep D1/R2 bindings out until there is a clear migration plan
+- document session expiry, revocation, and cleanup policy
+- add stronger local DO integration tests with Cloudflare's workers test pool
+- keep R2 out until asset or replay storage has a clear use case
 
 ## Phase 5: Polish UI
 
