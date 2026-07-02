@@ -31,3 +31,14 @@ test('GameSessionObject reads and writes the session snapshot key', () => {
   assert.match(source, /state\.storage\.put\(SESSION_SNAPSHOT_KEY/);
   assert.match(source, /hashSessionToken/);
 });
+
+test('GameSessionObject uses hibernatable WebSocket lifecycle APIs', () => {
+  const source = readFileSync(resolve(workerRoot, 'src/durable-objects/GameSessionObject.ts'), 'utf8');
+
+  assert.match(source, /acceptWebSocket\(server\)/);
+  assert.match(source, /serializeAttachment\(attachment\)/);
+  assert.match(source, /deserializeAttachment\(\)/);
+  assert.match(source, /async webSocketMessage/);
+  assert.match(source, /async webSocketClose/);
+  assert.match(source, /storage\.setAlarm/);
+});

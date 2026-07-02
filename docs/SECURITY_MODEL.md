@@ -4,9 +4,9 @@ Ludoria treats the frontend as untrusted. UI state and disabled buttons are conv
 
 ## Durable Object Authority
 
-Phase 4B keeps Token Bluffing authority in `GameSessionObject`. The Worker routes requests to a per-session Durable Object; the DO owns participants, WebSocket connections, chat, commands, and authoritative game state.
+Phase 4C keeps Token Bluffing authority in `GameSessionObject`. The Worker routes requests to a per-session Durable Object; the DO owns participants, hibernatable WebSocket connections, chat, commands, lifecycle checks, and authoritative game state.
 
-Live WebSocket connections remain instance-memory only. Recoverable session data is stored in a Durable Object `session:snapshot`.
+Live WebSocket connection identity is stored in WebSocket attachments with `sessionId`, `actorId`, `role`, and `sessionTokenHash`. Recoverable session data is stored in a Durable Object `session:snapshot`.
 
 ## Session Token Lifecycle
 
@@ -18,7 +18,9 @@ Participant token records include:
 - `tokenExpiresAt`
 - optional `revokedAt`
 
-Tokens expire after 24 hours. Expired or revoked tokens are rejected before WebSocket upgrade. `GameSessionActor` includes a minimal revoke method for future account/session management, but Phase 4B does not add a user-facing revoke UI.
+Tokens expire after 24 hours. Expired or revoked tokens are rejected before WebSocket upgrade and rechecked on WebSocket messages after wakeup. `GameSessionActor` includes a minimal revoke method for future account/session management, but Phase 4C does not add a user-facing revoke UI.
+
+WebSocket attachments must not store raw session tokens, hidden token lists, full game state, or account metadata.
 
 ## Hidden Multiplayer Information
 
@@ -55,7 +57,7 @@ Hints return one target cell and a single candidate for the current demo. They s
 
 ## Placeholder Risks
 
-Phase 4B still lacks durable auth, account identity, match history, rate limiting, and a production session recovery policy. It intentionally does not add D1. Future phases should decide which platform-level metadata belongs in D1 instead of the per-session snapshot.
+Phase 4C still lacks durable auth, account identity, match history, rate limiting, and a complete production recovery policy. It intentionally does not add D1. Future phases should decide which platform-level metadata belongs in D1 instead of the per-session snapshot.
 
 ## Test Coverage
 
@@ -68,3 +70,6 @@ Security-oriented tests cover:
 - public Sudoku puzzles do not contain the solution
 - locked givens and invalid Sudoku digits are rejected
 - invalid protocol shapes are rejected by schemas
+- hibernation attachments reject invalid shapes
+- expired and revoked actor tokens are rejected
+- room lifecycle starts active, refreshes on activity, and enters idle checking through alarm policy

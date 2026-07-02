@@ -6,10 +6,15 @@ import {
   tokenBluffingDemoDefinition
 } from '../../../packages/game-definitions/src/multiplayer/token-bluffing-demo.ts';
 import {
+  advanceRoomLifecycle,
+  createRoomLifecycle,
   createTokenExpiry,
+  getNextLifecycleAlarm,
   hashSessionToken,
+  isValidSocketAttachment,
   isParticipantTokenActive,
   snapshotContainsToken,
+  touchRoomActivity,
   trimChatMessages
 } from '../src/session-snapshot.ts';
 
@@ -42,6 +47,7 @@ function createSnapshotFixture(overrides = {}) {
       }
     ],
     chatMessages: [],
+    ...createRoomLifecycle(new Date(state.createdAt)),
     createdAt: state.createdAt,
     updatedAt: state.updatedAt,
     ...overrides
@@ -92,6 +98,79 @@ test('expired and revoked token participants are inactive', () => {
   assert.equal(isParticipantTokenActive(active, now), true);
   assert.equal(isParticipantTokenActive(expired, now), false);
   assert.equal(isParticipantTokenActive(revoked, now), false);
+});
+
+test('socket attachment validates persisted hibernation identity', () => {
+  assert.equal(isValidSocketAttachment({
+    sessionId: 'session-test',
+    actorId: 'player-1',
+    role: 'player',
+    sessionTokenHash: 'hash-player'
+  }), true);
+
+  assert.equal(isValidSocketAttachment({
+    sessionId: 'session-test',
+    actorId: 'player-1',
+    role: 'admin',
+    sessionTokenHash: 'hash-player'
+  }), false);
+
+  assert.equal(isValidSocketAttachment({
+    actorId: 'player-1',
+    role: 'player',
+    sessionTokenHash: 'hash-player'
+  }), false);
+});
+
+test('room lifecycle starts active and records activity timestamps', () => {
+  const startedAt = new Date('2026-07-01T00:00:00.000Z');
+  const lifecycle = createRoomLifecycle(startedAt);
+
+  assert.equal(lifecycle.roomStatus, 'active');
+  assert.equal(lifecycle.lastActivityAt, startedAt.toISOString());
+  assert.equal(lifecycle.idleCheckAt, '2026-07-01T00:30:00.000Z');
+
+  const snapshot = createSnapshotFixture(lifecycle);
+  const touched = touchRoomActivity(snapshot, new Date('2026-07-01T00:10:00.000Z'));
+
+  assert.equal(touched.roomStatus, 'active');
+  assert.equal(touched.lastActivityAt, '2026-07-01T00:10:00.000Z');
+  assert.equal(touched.idleCheckAt, '2026-07-01T00:40:00.000Z');
+});
+
+test('room lifecycle enters idle check before abandoned closure', () => {
+  const snapshot = createSnapshotFixture({
+    roomStatus: 'active',
+    expiresAt: '2026-07-02T00:00:00.000Z',
+    idleCheckAt: '2026-07-01T00:30:00.000Z',
+    lastActivityAt: '2026-07-01T00:00:00.000Z'
+  });
+
+  const idle = advanceRoomLifecycle(snapshot, {
+    now: new Date('2026-07-01T00:31:00.000Z'),
+    connectedCount: 1
+  });
+
+  assert.equal(idle.roomStatus, 'idle_checking');
+
+  const abandoned = advanceRoomLifecycle(snapshot, {
+    now: new Date('2026-07-02T00:01:00.000Z'),
+    connectedCount: 0
+  });
+
+  assert.equal(abandoned.roomStatus, 'abandoned');
+  assert.equal(abandoned.closedAt, '2026-07-02T00:01:00.000Z');
+});
+
+test('idle checking rooms schedule the next alarm at expiry', () => {
+  const snapshot = createSnapshotFixture({
+    roomStatus: 'idle_checking',
+    expiresAt: '2026-07-02T00:00:00.000Z',
+    idleCheckAt: '2026-07-01T00:30:00.000Z',
+    lastActivityAt: '2026-07-01T00:00:00.000Z'
+  });
+
+  assert.equal(getNextLifecycleAlarm(snapshot), Date.parse('2026-07-02T00:00:00.000Z'));
 });
 
 test('snapshot chat messages keep only the latest 100 entries', () => {

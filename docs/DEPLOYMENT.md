@@ -1,6 +1,6 @@
 # Deployment Plan
 
-Phase 4A is local-only. Do not deploy, create real Cloudflare resources, modify DNS, or create paid resources for this phase.
+Phase 4C is local-only. Do not deploy, create real Cloudflare resources, modify DNS, or create paid resources for this phase.
 
 ## Local Development
 
@@ -56,7 +56,7 @@ Expected phase:
 {
   "ok": true,
   "service": "ludoria-worker",
-  "phase": "phase-4b"
+  "phase": "phase-4c"
 }
 ```
 
@@ -72,7 +72,7 @@ class_name = "GameSessionObject"
 
 This lets `wrangler dev` route multiplayer sessions through `GameSessionObject`. It does not create a real production Durable Object resource until someone explicitly deploys.
 
-Phase 4B uses Durable Object storage locally through the `session:snapshot` key. No D1 or R2 binding is configured.
+Phase 4C uses Durable Object storage locally through the `session:snapshot` key and Durable Object alarms for idle room checks. No D1 or R2 binding is configured.
 
 ## Local Recovery Smoke
 
@@ -82,8 +82,9 @@ Manual recovery validation should cover:
 2. Join a player and spectator.
 3. Connect both WebSockets and confirm `SESSION_SNAPSHOT`.
 4. Submit `DECLARE_TOKEN_COUNT`.
-5. Confirm spectator payload contains `declaredToken` and no `hiddenTokens`.
-6. Confirm tests cover snapshot serialization, token hashes, token expiry, and revoked-token behavior.
+5. Send `KEEP_ALIVE` over WebSocket and confirm a fresh safe snapshot.
+6. Confirm spectator payload contains `declaredToken` and no `hiddenTokens`.
+7. Confirm tests cover hibernation attachment validation, snapshot serialization, token hashes, token expiry, revoked-token behavior, and lifecycle transitions.
 
 ## Example Config
 
@@ -91,7 +92,7 @@ The root `wrangler.example.toml` mirrors the local shape and documents what must
 
 ## Future Cloudflare Deployment Steps
 
-Phase 4C or later should:
+Phase 4D or later should:
 
 - decide whether to move platform metadata to D1
 - add D1 schema and migrations for session metadata

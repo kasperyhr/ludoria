@@ -61,12 +61,20 @@ Phase 4B still does not deploy, create D1/R2 resources, or add a complete accoun
 
 ## Phase 4C: Recovery Policy and Metadata Boundaries
 
-Recommended next step:
+Implemented local Durable Object recovery/lifecycle hardening:
 
-- define production recovery semantics after DO eviction
+- migrated Token Bluffing WebSockets to Durable Object WebSocket Hibernation
+- persisted per-socket attachment identity with `sessionId`, `actorId`, `role`, and `sessionTokenHash`
+- restored wakeup context from attachment plus `session:snapshot`
+- added `RoomStatus`, `KEEP_ALIVE`, `IDLE_CHECK`, and `ROOM_STATUS_CHANGED`
+- added room lifecycle fields, idle alarm scheduling, and basic abandoned-room policy
+- kept Sudoku Lite untouched as a solo puzzle placeholder
+
+Remaining future work:
+
 - decide D1 schema for lobby/session metadata
-- document session expiry, revocation, and cleanup policy
 - add stronger local DO integration tests with Cloudflare's workers test pool
+- define deployment rollback and migration practice
 - keep R2 out until asset or replay storage has a clear use case
 
 ## Phase 5: Polish UI

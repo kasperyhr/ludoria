@@ -23,7 +23,7 @@ export interface GameCatalogItem {
 export interface HealthResponse {
   ok: true;
   service: 'ludoria-worker';
-  phase: 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4a' | 'phase-4b';
+  phase: 'phase-1' | 'phase-2' | 'phase-3' | 'phase-4a' | 'phase-4b' | 'phase-4c';
 }
 
 export interface ApiError {
@@ -51,6 +51,8 @@ function parseWithSchema<T>(schema: v.GenericSchema<unknown, T>, input: unknown)
 }
 
 export type SessionRole = 'player' | 'spectator';
+
+export type RoomStatus = 'active' | 'idle_checking' | 'closed' | 'abandoned';
 
 export interface CreateSessionResponse {
   sessionId: string;
@@ -139,6 +141,9 @@ export const ClientToServerMessageSchema = v.variant('type', [
     type: v.literal('RECONNECT')
   }),
   v.object({
+    type: v.literal('KEEP_ALIVE')
+  }),
+  v.object({
     type: v.literal('SUBMIT_COMMAND'),
     commandId: v.pipe(v.string(), v.minLength(1)),
     command: DeclareTokenCountCommandSchema
@@ -165,6 +170,8 @@ export type ServerToClientMessage =
   | { type: 'SPECTATOR_VIEW_UPDATE'; view: TokenBluffingSpectatorView }
   | { type: 'PUBLIC_EVENT'; event: TokenBluffingPublicEvent }
   | { type: 'CHAT_MESSAGE'; message: ChatMessage }
+  | { type: 'IDLE_CHECK'; sessionId: string; message: string; expiresAt: string }
+  | { type: 'ROOM_STATUS_CHANGED'; sessionId: string; status: RoomStatus }
   | { type: 'ERROR'; code: ProtocolErrorCode | string; message: string };
 
 export interface ChatMessage {

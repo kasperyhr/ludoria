@@ -2,17 +2,17 @@
 
 Ludoria is a Cloudflare-first TypeScript monorepo. The web shell lives in `apps/web`, the Worker/BFF lives in `apps/worker`, and shared contracts live in `packages/*`.
 
-## Phase 4B Shape
+## Phase 4C Shape
 
 - `apps/web`: React UI for the game catalog, Token Bluffing Demo, and Sudoku Lite.
-- `apps/worker`: Hono Worker with split route modules, a `GameSessionObject` Durable Object, a `session:snapshot` storage key, and local Sudoku puzzle sessions.
+- `apps/worker`: Hono Worker with split route modules, a `GameSessionObject` Durable Object, hibernatable WebSocket connections, lifecycle alarms, a `session:snapshot` storage key, and local Sudoku puzzle sessions.
 - `packages/game-engine`: framework-neutral multiplayer and solo puzzle contracts.
 - `packages/game-definitions`: concrete game rules for `token-bluffing-demo` and `sudoku-lite`.
 - `packages/protocol`: shared protocol types plus lightweight Valibot runtime validation.
 
 ## Durable Object Session Routing
 
-Phase 4A routes multiplayer sessions deterministically:
+Multiplayer sessions route deterministically:
 
 ```text
 sessionId -> env.GAME_SESSION_OBJECT.idFromName(sessionId) -> GameSessionObject
@@ -45,9 +45,11 @@ Client command
 
 React does not implement game rules. Worker route handlers do routing and protocol boundaries; game rules remain in `packages/game-definitions`.
 
-## Durable Object Persistence Status
+## Durable Object Persistence And Lifecycle
 
-`GameSessionObject` keeps live WebSocket connections in instance memory, but persists a minimal `session:snapshot` in Durable Object storage after create, join, chat, command, connect, and disconnect state changes.
+`GameSessionObject` uses Durable Object WebSocket Hibernation for live Token Bluffing sockets. Each accepted socket serializes a small attachment with `sessionId`, `actorId`, `role`, and `sessionTokenHash`; after eviction and wakeup the DO restores context from that attachment plus the stored `session:snapshot`.
+
+The DO persists a minimal `session:snapshot` after create, join, chat, command, connect, disconnect, and lifecycle state changes.
 
 The snapshot contains:
 
@@ -57,11 +59,15 @@ The snapshot contains:
 - server-authoritative Token Bluffing state
 - participant records with token hashes and expiry
 - recent chat messages
+- `roomStatus`
+- `expiresAt`
+- `idleCheckAt`
+- `lastActivityAt`
 - `createdAt` and `updatedAt`
 
-The snapshot does not contain raw session tokens, account metadata, D1-style lobby metadata, WebSocket objects, or platform-level analytics.
+The snapshot does not contain raw session tokens, account metadata, D1-style lobby metadata, WebSocket objects, or platform-level analytics. WebSocket attachments also do not contain raw tokens or hidden game state.
 
-Phase 4C should decide how much recovery policy belongs in Durable Object storage versus future D1 metadata.
+Lifecycle alarms currently move inactive rooms to `idle_checking` and broadcast `IDLE_CHECK`. A `KEEP_ALIVE` message marks the room active again and refreshes `lastActivityAt` / `idleCheckAt`. Empty rooms can be marked `abandoned` after expiry; connected rooms are not closed simply because a player thinks for a long time.
 
 ## Solo Puzzle Flow
 
@@ -71,7 +77,7 @@ Sudoku Lite still follows:
 Puzzle -> Progress -> Move -> Completion
 ```
 
-Sudoku sessions remain local Worker memory placeholders in Phase 4A. The public puzzle includes givens, board metadata, and a solution hash placeholder. It does not include the solution grid.
+Sudoku sessions remain local Worker memory placeholders in Phase 4C. The public puzzle includes givens, board metadata, and a solution hash placeholder. It does not include the solution grid.
 
 ## Runtime Validation
 
@@ -85,4 +91,4 @@ Valibot was chosen because it is lightweight and enough for the current transpor
 
 ## Cloudflare Target
 
-The target runtime remains Workers, Durable Objects, D1, and R2. Phase 4A intentionally runs only in local `wrangler dev`; it does not deploy or create real Cloudflare resources.
+The target runtime remains Workers, Durable Objects, D1, and R2. Phase 4C intentionally runs only in local `wrangler dev`; it does not deploy or create real Cloudflare resources.

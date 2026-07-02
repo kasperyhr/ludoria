@@ -1,12 +1,15 @@
-import type { CreateSessionResponse } from '@ludoria/protocol';
-import { parseJoinSessionRequest } from '@ludoria/protocol';
+import type { ClientToServerMessage, CreateSessionResponse, ServerToClientMessage } from '@ludoria/protocol';
+import { parseClientToServerMessage, parseJoinSessionRequest } from '@ludoria/protocol';
 import type { WorkerEnv } from '../env';
 import { apiError, getOrigin } from '../http';
 import { GameSessionActor } from '../game-session-actor';
-import type { GameSessionSnapshot } from '../session-snapshot';
+import type { GameSessionSocketAttachment, GameSessionSnapshot } from '../session-snapshot';
 import {
+  advanceRoomLifecycle,
   createTokenExpiry,
+  getNextLifecycleAlarm,
   hashSessionToken,
+  isValidSocketAttachment,
   SESSION_SNAPSHOT_KEY
 } from '../session-snapshot';
 
@@ -57,6 +60,7 @@ export class GameSessionObject {
     });
     this.actor = actor;
     await this.saveSnapshot(actor);
+    await this.scheduleLifecycleAlarm(actor.toSnapshot());
 
     const response: CreateSessionResponse = {
       sessionId: body.sessionId,
@@ -89,6 +93,7 @@ export class GameSessionObject {
       tokenExpiresAt: createTokenExpiry()
     });
     await this.saveSnapshot(actor);
+    await this.scheduleLifecycleAlarm(actor.toSnapshot());
 
     return Response.json({
       ...response,
@@ -120,8 +125,20 @@ export class GameSessionObject {
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-    server.accept();
-    actor.connect(server, sessionTokenHash);
+    this.state.acceptWebSocket(server);
+
+    const attachment: GameSessionSocketAttachment = {
+      sessionId: actor.sessionId,
+      actorId: tokenValidation.actorId,
+      role: tokenValidation.participant.role,
+      sessionTokenHash
+    };
+    server.serializeAttachment(attachment);
+
+    actor.markConnected(tokenValidation.actorId);
+    await this.saveSnapshot(actor);
+    this.send(server, actor.getSnapshotForParticipant(tokenValidation.actorId, tokenValidation.participant.role));
+    this.broadcastViews(actor);
 
     return new Response(null, {
       status: 101,
@@ -129,16 +146,114 @@ export class GameSessionObject {
     });
   }
 
-  private ensureActor(sessionId: string) {
-    if (!this.actor) {
-      this.actor = new GameSessionActor(sessionId, {
-        onChange: (changedActor) => {
-          void this.saveSnapshot(changedActor);
-        }
-      });
+  async webSocketMessage(socket: WebSocket, rawMessage: string | ArrayBuffer) {
+    const attachment = socket.deserializeAttachment();
+
+    if (!isValidSocketAttachment(attachment)) {
+      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: 'Invalid WebSocket attachment.' });
+      socket.close(1008, 'Invalid WebSocket attachment.');
+      return;
     }
 
-    return this.actor;
+    const actor = await this.loadActor(attachment.sessionId);
+
+    if (!actor) {
+      this.send(socket, { type: 'ERROR', code: 'SESSION_NOT_FOUND', message: 'Session not found.' });
+      socket.close(1008, 'Session not found.');
+      return;
+    }
+
+    const tokenValidation = actor.validateConnectionToken(attachment.sessionTokenHash);
+
+    if (!tokenValidation.ok || tokenValidation.actorId !== attachment.actorId) {
+      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: tokenValidation.ok ? 'Session token mismatch.' : tokenValidation.message });
+      socket.close(1008, 'Session token expired or revoked.');
+      return;
+    }
+
+    const message = this.parseClientMessage(rawMessage);
+
+    if (!message) {
+      this.send(socket, { type: 'ERROR', code: 'INVALID_MESSAGE', message: 'Invalid WebSocket message.' });
+      return;
+    }
+
+    const result = actor.handleClientMessage({
+      actorId: attachment.actorId,
+      role: attachment.role
+    }, message);
+
+    for (const directMessage of result.directMessages) {
+      this.send(socket, directMessage);
+    }
+
+    if (result.broadcastEvent) {
+      this.broadcast(result.broadcastEvent);
+    }
+
+    if (result.shouldBroadcastViews) {
+      this.broadcastViews(actor);
+    }
+
+    if (result.isActivity) {
+      await this.saveSnapshot(actor);
+    }
+  }
+
+  async webSocketClose(socket: WebSocket) {
+    await this.detachSocket(socket);
+  }
+
+  async webSocketError(socket: WebSocket) {
+    await this.detachSocket(socket);
+  }
+
+  async alarm() {
+    const snapshot = await this.state.storage.get<GameSessionSnapshot>(SESSION_SNAPSHOT_KEY);
+
+    if (!snapshot) {
+      await this.state.storage.deleteAlarm();
+      return;
+    }
+
+    const connectedCount = this.getValidSockets().length;
+    const nextLifecycle = advanceRoomLifecycle(snapshot, {
+      connectedCount,
+      now: new Date()
+    });
+
+    if (nextLifecycle.roomStatus !== snapshot.roomStatus || nextLifecycle.closedAt !== snapshot.closedAt) {
+      const nextSnapshot: GameSessionSnapshot = {
+        ...snapshot,
+        ...nextLifecycle,
+        updatedAt: new Date().toISOString()
+      };
+      await this.state.storage.put(SESSION_SNAPSHOT_KEY, nextSnapshot);
+
+      if (this.actor) {
+        this.actor.setRoomStatus(nextSnapshot.roomStatus, nextSnapshot.closedAt);
+      }
+
+      this.broadcast({
+        type: 'ROOM_STATUS_CHANGED',
+        sessionId: snapshot.sessionId,
+        status: nextSnapshot.roomStatus
+      });
+
+      if (nextSnapshot.roomStatus === 'idle_checking' && connectedCount > 0) {
+        this.broadcast({
+          type: 'IDLE_CHECK',
+          sessionId: snapshot.sessionId,
+          message: '房间空闲，是否继续？',
+          expiresAt: nextSnapshot.expiresAt
+        });
+      }
+
+      await this.scheduleLifecycleAlarm(nextSnapshot);
+      return;
+    }
+
+    await this.scheduleLifecycleAlarm(snapshot);
   }
 
   private getSessionId(request: Request) {
@@ -170,6 +285,74 @@ export class GameSessionObject {
   }
 
   private async saveSnapshot(actor: GameSessionActor) {
-    await this.state.storage.put(SESSION_SNAPSHOT_KEY, actor.toSnapshot());
+    const snapshot = actor.toSnapshot();
+    await this.state.storage.put(SESSION_SNAPSHOT_KEY, snapshot);
+    await this.scheduleLifecycleAlarm(snapshot);
+  }
+
+  private async scheduleLifecycleAlarm(snapshot: GameSessionSnapshot) {
+    if (snapshot.roomStatus === 'closed' || snapshot.roomStatus === 'abandoned') {
+      await this.state.storage.deleteAlarm();
+      return;
+    }
+
+    await this.state.storage.setAlarm(getNextLifecycleAlarm(snapshot));
+  }
+
+  private async detachSocket(socket: WebSocket) {
+    const attachment = socket.deserializeAttachment();
+
+    if (!isValidSocketAttachment(attachment)) {
+      return;
+    }
+
+    const actor = await this.loadActor(attachment.sessionId);
+
+    if (!actor) {
+      return;
+    }
+
+    actor.markDisconnected(attachment.actorId);
+    await this.saveSnapshot(actor);
+    this.broadcastViews(actor);
+  }
+
+  private parseClientMessage(rawMessage: string | ArrayBuffer): ClientToServerMessage | null {
+    if (typeof rawMessage !== 'string') {
+      return null;
+    }
+
+    try {
+      const parsed = parseClientToServerMessage(JSON.parse(rawMessage));
+      return parsed.ok ? parsed.value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private getValidSockets() {
+    return this.state.getWebSockets().filter((socket) => isValidSocketAttachment(socket.deserializeAttachment()));
+  }
+
+  private broadcast(message: ServerToClientMessage) {
+    for (const socket of this.getValidSockets()) {
+      this.send(socket, message);
+    }
+  }
+
+  private broadcastViews(actor: GameSessionActor) {
+    for (const socket of this.getValidSockets()) {
+      const attachment = socket.deserializeAttachment();
+
+      if (isValidSocketAttachment(attachment) && attachment.sessionId === actor.sessionId) {
+        this.send(socket, actor.getViewUpdateForParticipant(attachment.actorId, attachment.role));
+      }
+    }
+  }
+
+  private send(socket: WebSocket, message: ServerToClientMessage) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
   }
 }

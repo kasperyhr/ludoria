@@ -14,6 +14,11 @@ import { AppLayout } from '../components/AppLayout';
 const tokenOptions: TokenColor[] = ['red', 'blue', 'gold'];
 const workerWebSocketOrigin = import.meta.env.VITE_LUDORIA_WORKER_WS_URL ?? 'ws://127.0.0.1:8787';
 
+interface IdleCheckPrompt {
+  message: string;
+  expiresAt: string;
+}
+
 function toWebSocketUrl(url: string) {
   if (url.startsWith('/')) {
     return `${workerWebSocketOrigin}${url.replace(/^\/worker-api/, '')}`;
@@ -36,6 +41,7 @@ export function TokenBluffingDemoPage() {
   const [declaredCount, setDeclaredCount] = useState(1);
   const [chatText, setChatText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [idleCheckPrompt, setIdleCheckPrompt] = useState<IdleCheckPrompt | null>(null);
 
   const selfTokens = useMemo(() => {
     if (view?.viewer !== 'player') {
@@ -72,6 +78,13 @@ export function TokenBluffingDemoPage() {
         setEvents((current) => [...current, message]);
       } else if (message.type === 'CHAT_MESSAGE') {
         setChatMessages((current) => [...current, message.message]);
+      } else if (message.type === 'IDLE_CHECK') {
+        setIdleCheckPrompt({
+          message: message.message,
+          expiresAt: message.expiresAt
+        });
+      } else if (message.type === 'ROOM_STATUS_CHANGED') {
+        setEvents((current) => [...current, message]);
       } else if (message.type === 'ERROR') {
         setError(message.message);
       }
@@ -149,6 +162,18 @@ export function TokenBluffingDemoPage() {
     setChatText('');
   }
 
+  function sendKeepAlive() {
+    const socket = socketRef.current;
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      setError('WebSocket 尚未连接。');
+      return;
+    }
+
+    socket.send(JSON.stringify({ type: 'KEEP_ALIVE' }));
+    setIdleCheckPrompt(null);
+  }
+
   return (
     <AppLayout>
       <main className="demo-shell">
@@ -176,6 +201,13 @@ export function TokenBluffingDemoPage() {
               <Button variant="secondary" onClick={handleReconnect}>断线重连</Button>
             </div>
             <p className="panel-note">连接状态：<Badge>{connectionStatus}</Badge> 当前身份：<Badge>{role}</Badge></p>
+            {idleCheckPrompt ? (
+              <div className="panel-note">
+                <p>{idleCheckPrompt.message}</p>
+                <p>有效期至：{new Date(idleCheckPrompt.expiresAt).toLocaleString()}</p>
+                <Button variant="secondary" onClick={sendKeepAlive}>继续房间</Button>
+              </div>
+            ) : null}
             {error ? <p className="panel-note panel-note--error">{error}</p> : null}
           </Card>
 

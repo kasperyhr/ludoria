@@ -3,17 +3,22 @@ import {
   createTokenBluffingPlayer,
   tokenBluffingDemoDefinition
 } from '@ludoria/game-definitions';
-import type { TokenBluffingEvent, TokenBluffingState } from '@ludoria/game-definitions';
+import type { TokenBluffingState } from '@ludoria/game-definitions';
 import type {
   ChatMessage,
   ClientToServerMessage,
+  RoomStatus,
   JoinSessionResponse,
   ServerToClientMessage,
   SessionRole
 } from '@ludoria/protocol';
-import { parseClientToServerMessage } from '@ludoria/protocol';
 import type { GameSessionSnapshot, GameSessionSnapshotParticipant } from './session-snapshot';
-import { isParticipantTokenActive, trimChatMessages } from './session-snapshot';
+import {
+  createRoomLifecycle,
+  isParticipantTokenActive,
+  ROOM_IDLE_CHECK_MS,
+  trimChatMessages
+} from './session-snapshot';
 
 interface SessionParticipant extends GameSessionSnapshotParticipant {}
 
@@ -43,7 +48,13 @@ interface SessionParticipantInput {
 interface Connection {
   actorId: string;
   role: SessionRole;
-  socket: WebSocket;
+}
+
+export interface ClientMessageResult {
+  directMessages: ServerToClientMessage[];
+  broadcastEvent?: ServerToClientMessage;
+  shouldBroadcastViews?: boolean;
+  isActivity?: boolean;
 }
 
 export class GameSessionActor {
@@ -51,14 +62,23 @@ export class GameSessionActor {
   private state: TokenBluffingState;
   private readonly participants = new Map<string, SessionParticipant>();
   private readonly tokenHashToActorId = new Map<string, string>();
-  private readonly connections = new Map<WebSocket, Connection>();
   private readonly chatMessages: ChatMessage[] = [];
   private readonly onChange?: (actor: GameSessionActor) => void;
+  private roomStatus: RoomStatus = 'active';
+  private expiresAt: string;
+  private idleCheckAt: string;
+  private lastActivityAt: string;
+  private closedAt?: string;
 
   constructor(sessionId: string, options: GameSessionActorOptions = {}) {
     this.sessionId = sessionId;
     this.state = tokenBluffingDemoDefinition.setup(sessionId);
     this.onChange = options.onChange;
+    const lifecycle = createRoomLifecycle(new Date(this.state.createdAt));
+    this.roomStatus = lifecycle.roomStatus;
+    this.expiresAt = lifecycle.expiresAt;
+    this.idleCheckAt = lifecycle.idleCheckAt;
+    this.lastActivityAt = lifecycle.lastActivityAt;
   }
 
   static fromSnapshot({ snapshot, onChange }: GameSessionActorSnapshotOptions) {
@@ -70,6 +90,11 @@ export class GameSessionActor {
     }
 
     actor.chatMessages.push(...trimChatMessages(snapshot.chatMessages));
+    actor.roomStatus = snapshot.roomStatus ?? 'active';
+    actor.expiresAt = snapshot.expiresAt ?? createRoomLifecycle(new Date(snapshot.createdAt)).expiresAt;
+    actor.idleCheckAt = snapshot.idleCheckAt ?? createRoomLifecycle(new Date(snapshot.updatedAt)).idleCheckAt;
+    actor.lastActivityAt = snapshot.lastActivityAt ?? snapshot.updatedAt;
+    actor.closedAt = snapshot.closedAt;
     return actor;
   }
 
@@ -89,10 +114,9 @@ export class GameSessionActor {
       const player = createTokenBluffingPlayer(Object.keys(this.state.players).length, actorId, displayName);
       const result = addTokenBluffingPlayer(this.state, player);
       this.state = result.state;
-      this.broadcastPublicEvent(result.event);
-      this.broadcastViews();
     }
 
+    this.recordActivity();
     this.notifyChange();
 
     return {
@@ -104,45 +128,6 @@ export class GameSessionActor {
     };
   }
 
-  connect(socket: WebSocket, sessionTokenHash: string) {
-    const tokenValidation = this.validateConnectionToken(sessionTokenHash);
-
-    if (!tokenValidation.ok) {
-      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: tokenValidation.message });
-      socket.close(1008, tokenValidation.message);
-      return;
-    }
-
-    const { actorId, participant } = tokenValidation;
-
-    if (participant.role === 'player' && this.state.players[actorId]) {
-      this.state = {
-        ...this.state,
-        players: {
-          ...this.state.players,
-          [actorId]: {
-            ...this.state.players[actorId],
-            connected: true
-          }
-        },
-        updatedAt: new Date().toISOString()
-      };
-      this.notifyChange();
-    }
-
-    this.connections.set(socket, {
-      actorId,
-      role: participant.role,
-      socket
-    });
-
-    socket.addEventListener('message', (event) => this.handleMessage(socket, event.data));
-    socket.addEventListener('close', () => this.disconnect(socket));
-    socket.addEventListener('error', () => this.disconnect(socket));
-
-    this.sendSnapshot(socket);
-  }
-
   toSnapshot(now = new Date()): GameSessionSnapshot {
     return {
       version: 1,
@@ -151,6 +136,11 @@ export class GameSessionActor {
       state: this.state,
       participants: [...this.participants.values()],
       chatMessages: trimChatMessages(this.chatMessages),
+      roomStatus: this.roomStatus,
+      expiresAt: this.expiresAt,
+      idleCheckAt: this.idleCheckAt,
+      lastActivityAt: this.lastActivityAt,
+      ...(this.closedAt ? { closedAt: this.closedAt } : {}),
       createdAt: this.state.createdAt,
       updatedAt: now.toISOString()
     };
@@ -190,53 +180,106 @@ export class GameSessionActor {
     return { ok: true, actorId, participant };
   }
 
-  private handleMessage(socket: WebSocket, raw: unknown) {
-    const connection = this.connections.get(socket);
+  markConnected(actorId: string) {
+    const participant = this.participants.get(actorId);
 
-    if (!connection) {
-      return;
+    if (!participant) {
+      return { ok: false, message: 'Participant not found.' };
     }
 
-    const message = this.parseMessage(raw);
-
-    if (!message) {
-      this.send(socket, { type: 'ERROR', code: 'INVALID_MESSAGE', message: 'Invalid WebSocket message.' });
-      return;
+    if (participant.role === 'player' && this.state.players[actorId]) {
+      this.state = {
+        ...this.state,
+        players: {
+          ...this.state.players,
+          [actorId]: {
+            ...this.state.players[actorId],
+            connected: true
+          }
+        },
+        updatedAt: new Date().toISOString()
+      };
+      this.notifyChange();
     }
 
+    return { ok: true, participant };
+  }
+
+  markDisconnected(actorId: string) {
+    const participant = this.participants.get(actorId);
+    const player = this.state.players[actorId];
+
+    if (!participant || participant.role !== 'player' || !player) {
+      return false;
+    }
+
+    this.state = {
+      ...this.state,
+      players: {
+        ...this.state.players,
+        [actorId]: {
+          ...player,
+          connected: false
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    this.notifyChange();
+    return true;
+  }
+
+  setRoomStatus(status: RoomStatus, closedAt?: string) {
+    this.roomStatus = status;
+    this.closedAt = closedAt;
+    this.notifyChange();
+  }
+
+  handleClientMessage(connection: Connection, message: ClientToServerMessage): ClientMessageResult {
     if (message.type === 'HEARTBEAT') {
-      this.sendSnapshot(socket);
-      return;
+      return {
+        directMessages: [this.getSnapshotForParticipant(connection.actorId, connection.role)]
+      };
+    }
+
+    if (message.type === 'KEEP_ALIVE') {
+      this.recordActivity();
+      return {
+        directMessages: [this.getSnapshotForParticipant(connection.actorId, connection.role)],
+        isActivity: true
+      };
     }
 
     if (message.type === 'CHAT_MESSAGE') {
-      this.handleChatMessage(connection, message.text);
-      return;
+      return this.handleChatMessage(connection, message.text);
     }
 
     if (message.type === 'SUBMIT_COMMAND') {
-      this.handleSubmitCommand(socket, connection, message);
-      return;
+      return this.handleSubmitCommand(connection, message);
     }
 
     if (message.type === 'RECONNECT') {
-      this.sendSnapshot(socket);
-      return;
+      return {
+        directMessages: [this.getSnapshotForParticipant(connection.actorId, connection.role)]
+      };
     }
 
     if (message.type === 'JOIN_SESSION') {
-      this.sendSnapshot(socket);
+      return {
+        directMessages: [this.getSnapshotForParticipant(connection.actorId, connection.role)]
+      };
     }
+
+    return { directMessages: [] };
   }
 
   private handleSubmitCommand(
-    socket: WebSocket,
     connection: Connection,
     message: Extract<ClientToServerMessage, { type: 'SUBMIT_COMMAND' }>
-  ) {
+  ): ClientMessageResult {
     if (connection.role !== 'player') {
-      this.send(socket, { type: 'ERROR', code: 'UNAUTHORIZED', message: 'Only players can submit commands.' });
-      return;
+      return {
+        directMessages: [{ type: 'ERROR', code: 'UNAUTHORIZED', message: 'Only players can submit commands.' }]
+      };
     }
 
     const result = tokenBluffingDemoDefinition.applyCommand({
@@ -246,21 +289,27 @@ export class GameSessionActor {
     }, this.state);
 
     if (!result.ok) {
-      this.send(socket, { type: 'ERROR', code: result.error, message: result.message });
-      return;
+      return {
+        directMessages: [{ type: 'ERROR', code: result.error, message: result.message }]
+      };
     }
 
     this.state = result.value.state;
-    this.broadcastPublicEvent(result.value.event);
-    this.broadcastViews();
+    this.recordActivity();
     this.notifyChange();
+    return {
+      directMessages: [],
+      broadcastEvent: { type: 'PUBLIC_EVENT', event: result.value.event },
+      shouldBroadcastViews: true,
+      isActivity: true
+    };
   }
 
-  private handleChatMessage(connection: Connection, text: string) {
+  private handleChatMessage(connection: Connection, text: string): ClientMessageResult {
     const participant = this.participants.get(connection.actorId);
 
     if (!participant || !text.trim()) {
-      return;
+      return { directMessages: [] };
     }
 
     const message: ChatMessage = {
@@ -272,104 +321,45 @@ export class GameSessionActor {
     };
 
     this.chatMessages.push(message);
-    this.broadcast({ type: 'CHAT_MESSAGE', message });
+    this.recordActivity();
     this.notifyChange();
-  }
-
-  private disconnect(socket: WebSocket) {
-    const connection = this.connections.get(socket);
-    this.connections.delete(socket);
-
-    const player = connection ? this.state.players[connection.actorId] : undefined;
-
-    if (!connection || connection.role !== 'player' || !player) {
-      return;
-    }
-
-    this.state = {
-      ...this.state,
-      players: {
-        ...this.state.players,
-        [connection.actorId]: {
-          ...player,
-          connected: false
-        }
-      },
-      updatedAt: new Date().toISOString()
+    return {
+      directMessages: [],
+      broadcastEvent: { type: 'CHAT_MESSAGE', message },
+      isActivity: true
     };
-
-    this.broadcastViews();
-    this.notifyChange();
   }
 
-  private sendSnapshot(socket: WebSocket) {
-    const connection = this.connections.get(socket);
-
-    if (!connection) {
-      return;
-    }
-
-    if (connection.role === 'player') {
-      this.send(socket, {
+  getSnapshotForParticipant(actorId: string, role: SessionRole): ServerToClientMessage {
+    if (role === 'player') {
+      return {
         type: 'SESSION_SNAPSHOT',
         sessionId: this.sessionId,
         role: 'player',
-        view: tokenBluffingDemoDefinition.getPlayerView(this.state, connection.actorId)
-      });
-      return;
+        view: tokenBluffingDemoDefinition.getPlayerView(this.state, actorId)
+      };
     }
 
-    this.send(socket, {
+    return {
       type: 'SESSION_SNAPSHOT',
       sessionId: this.sessionId,
       role: 'spectator',
       view: tokenBluffingDemoDefinition.getSpectatorView(this.state)
-    });
+    };
   }
 
-  private broadcastViews() {
-    for (const connection of this.connections.values()) {
-      if (connection.role === 'player') {
-        this.send(connection.socket, {
-          type: 'PLAYER_VIEW_UPDATE',
-          view: tokenBluffingDemoDefinition.getPlayerView(this.state, connection.actorId)
-        });
-      } else {
-        this.send(connection.socket, {
-          type: 'SPECTATOR_VIEW_UPDATE',
-          view: tokenBluffingDemoDefinition.getSpectatorView(this.state)
-        });
-      }
-    }
-  }
-
-  private broadcastPublicEvent(event: TokenBluffingEvent) {
-    this.broadcast({ type: 'PUBLIC_EVENT', event });
-  }
-
-  private broadcast(message: ServerToClientMessage) {
-    for (const connection of this.connections.values()) {
-      this.send(connection.socket, message);
-    }
-  }
-
-  private send(socket: WebSocket, message: ServerToClientMessage) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
-    }
-  }
-
-  private parseMessage(raw: unknown): ClientToServerMessage | null {
-    if (typeof raw !== 'string') {
-      return null;
+  getViewUpdateForParticipant(actorId: string, role: SessionRole): ServerToClientMessage {
+    if (role === 'player') {
+      return {
+        type: 'PLAYER_VIEW_UPDATE',
+        view: tokenBluffingDemoDefinition.getPlayerView(this.state, actorId)
+      };
     }
 
-    try {
-      const result = parseClientToServerMessage(JSON.parse(raw));
-      return result.ok ? result.value : null;
-    } catch {
-      return null;
-    }
+    return {
+      type: 'SPECTATOR_VIEW_UPDATE',
+      view: tokenBluffingDemoDefinition.getSpectatorView(this.state)
+    };
   }
 
   private addParticipant(participant: SessionParticipantInput) {
@@ -379,5 +369,11 @@ export class GameSessionActor {
 
   private notifyChange() {
     this.onChange?.(this);
+  }
+
+  private recordActivity(now = new Date()) {
+    this.roomStatus = 'active';
+    this.idleCheckAt = new Date(now.getTime() + ROOM_IDLE_CHECK_MS).toISOString();
+    this.lastActivityAt = now.toISOString();
   }
 }
