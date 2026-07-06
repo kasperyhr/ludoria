@@ -1,4 +1,4 @@
-﻿---
+---
 name: cloudflare-workers-fullstack
 description: 当任务涉及 Worker、Hono、Wrangler、D1、R2 或 Durable Objects 时触发。
 ---

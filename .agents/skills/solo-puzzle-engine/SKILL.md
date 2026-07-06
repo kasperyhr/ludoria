@@ -1,4 +1,4 @@
-﻿---
+---
 name: solo-puzzle-engine
 description: 当任务涉及 Sudoku、Nonogram、题目生成、唯一解验证、难度、autosave、hint 或 completion check 时触发。
 ---

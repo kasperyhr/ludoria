@@ -1,4 +1,4 @@
-﻿---
+---
 name: durable-object-game-session
 description: 当任务涉及多人房间、WebSocket、玩家、观战、断线重连、长考、TTL 或 idle check 时触发。
 ---

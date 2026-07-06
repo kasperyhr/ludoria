@@ -1,4 +1,4 @@
-﻿---
+---
 name: responsive-game-ui
 description: 当任务涉及移动端、桌面端、棋盘、手牌、聊天、日志或 puzzle board 布局时触发。
 ---

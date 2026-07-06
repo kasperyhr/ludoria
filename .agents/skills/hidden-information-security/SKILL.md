@@ -1,4 +1,4 @@
-﻿---
+---
 name: hidden-information-security
 description: 当任务涉及手牌、身份、私有 token、solution、full state 或视角投影时触发。
 ---

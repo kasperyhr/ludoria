@@ -1,4 +1,4 @@
-﻿---
+---
 name: content-encoding-quality
 description: 当任务涉及中文文档、README、AGENTS、repo-scoped skills、Markdown 生成、文件编码或出现问号乱码时触发。
 ---

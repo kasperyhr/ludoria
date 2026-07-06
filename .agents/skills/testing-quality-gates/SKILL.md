@@ -1,4 +1,4 @@
-﻿---
+---
 name: testing-quality-gates
 description: 当任务涉及测试、CI、类型检查、lint、build 或质量风险时触发。
 ---

@@ -1,4 +1,4 @@
-﻿---
+---
 name: vibe-coding-architecture-guardrails
 description: 当任务新增功能、重构或快速试验可能影响分层时触发。
 ---

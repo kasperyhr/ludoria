@@ -1,4 +1,4 @@
-﻿---
+---
 name: premium-ui-design-system
 description: 当任务涉及视觉设计、组件、主题、动效或页面 polish 时触发。
 ---

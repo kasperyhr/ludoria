@@ -1,4 +1,4 @@
-﻿---
+---
 name: game-engine-contract
 description: 当任务涉及 `packages/game-engine`、游戏定义、命令、事件、状态、视角或 puzzle contract 时触发。
 ---
