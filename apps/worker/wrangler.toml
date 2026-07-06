@@ -1,6 +1,11 @@
-name = "ludoria-worker"
+﻿name = "ludoria-worker"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ludoria-db"
+database_id = "local-ludoria-db-placeholder"
 
 [[durable_objects.bindings]]
 name = "GAME_SESSION_OBJECT"

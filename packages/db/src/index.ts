@@ -1,1 +1,3 @@
-export * from './schema';
+﻿export * from './schema';
+export * from './seed-data';
+export * from './metadata';

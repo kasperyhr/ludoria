@@ -1,43 +1,134 @@
-﻿# Database Schema Draft
+﻿# Database Schema
 
-Phase 0 只记录表草案，后续使用 Drizzle ORM 为 D1 编写 schema 和 migrations。
+Phase 5 introduces a local D1 metadata layer managed through Drizzle ORM. The schema lives in packages/db/src/schema.ts, migrations in packages/db/migrations/, and seed data in packages/db/src/seed-data.ts.
 
-## users
+## D1 Tables
 
-注册用户基础资料。
+### users
+Platform user metadata (placeholder for future account system).
 
-## guest_sessions
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| display_name | text NOT NULL | |
+| created_at | text NOT NULL | ISO datetime |
+| updated_at | text NOT NULL | ISO datetime |
 
-游客身份和过期时间。
+### guest_sessions
+Guest identity metadata. Does not store raw tokens.
 
-## game_catalog
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| display_name | text NOT NULL | |
+| created_at | text NOT NULL | |
+| expires_at | text | |
+| revoked_at | text | |
 
-游戏目录、分类、状态和展示元数据。
+### game_catalog
+Game directory entries.
 
-## game_sessions
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| name | text NOT NULL | |
+| mode | text NOT NULL | multiplayer or solo |
+| status | text NOT NULL | planned, preview, or available |
+| description | text NOT NULL | |
+| player_count_label | text NOT NULL | |
+| created_at | text NOT NULL | |
+| updated_at | text NOT NULL | |
 
-多人游戏房间或会话的元数据。
+### game_sessions
+Multiplayer session index. Does not store full GameState, hidden tokens, or raw session tokens.
 
-## session_players
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | session ID |
+| game_id | text NOT NULL | |
+| status | text NOT NULL | |
+| room_status | text NOT NULL | active, idle_checking, closed, abandoned |
+| created_at | text NOT NULL | |
+| updated_at | text NOT NULL | |
+| expires_at | text | |
+| closed_at | text | |
+| participant_count | integer NOT NULL | |
+| spectator_count | integer NOT NULL | |
+| durable_object_name | text | DO name for routing |
 
-玩家座位、连接状态和权限。
+### session_players
+Participant summary. Does not store hidden tokens or raw tokens.
 
-## session_invites
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| session_id | text FK | references game_sessions |
+| actor_id | text NOT NULL | |
+| display_name | text NOT NULL | |
+| role | text NOT NULL | player or spectator |
+| joined_at | text NOT NULL | |
+| left_at | text | |
 
-邀请码、过期时间和使用限制。
+### session_invites
+Future invite code metadata. Does not store plaintext codes.
 
-## puzzle_instances
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| session_id | text FK | references game_sessions |
+| invite_code_hash | text NOT NULL | |
+| created_at | text NOT NULL | |
+| expires_at | text | |
+| revoked_at | text | |
 
-单人 puzzle 实例和安全题面数据。
+### puzzle_sessions
+Solo puzzle metadata. Does not store solutions.
 
-## puzzle_progress
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| game_id | text NOT NULL | |
+| puzzle_id | text NOT NULL | |
+| status | text NOT NULL | active, completed, abandoned |
+| created_at | text NOT NULL | |
+| updated_at | text NOT NULL | |
+| completed_at | text | set when solved |
+| move_count | integer NOT NULL | |
 
-用户或游客的 puzzle 进度。
+### puzzle_progress
+Player progress. progress_json must not contain solution data.
 
-## match_results
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| puzzle_session_id | text FK | references puzzle_sessions |
+| progress_json | text NOT NULL | player-filled cells, no solution |
+| updated_at | text NOT NULL | |
 
-多人游戏结果。
+### review_summaries
+Future match review. summary_json must not leak pre-game-end hidden information.
 
-## review_summaries
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | |
+| session_id | text NOT NULL | |
+| game_id | text NOT NULL | |
+| summary_json | text NOT NULL | |
+| created_at | text NOT NULL | |
 
-游戏结束后的复盘摘要。
+## Migrations
+
+`powershell
+cd packages/db
+npx drizzle-kit generate --config drizzle.config.ts
+npx wrangler d1 migrations apply ludoria-db --local
+`
+
+The initial migration (0000_initial_metadata.sql) creates all 9 tables.
+
+## What D1 Never Stores
+
+- Raw session tokens
+- Hidden player tokens, hands, private roles
+- Sudoku solutions or answer grids
+- Complete authoritative multiplayer GameState (that lives in DO storage)

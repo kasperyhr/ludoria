@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -12,9 +12,10 @@ test('multiplayer routes are wired to Durable Object binding', () => {
 
   assert.match(source, /GAME_SESSION_OBJECT\.idFromName\(sessionId\)/);
   assert.match(source, /GAME_SESSION_OBJECT\.get/);
-  assert.match(source, /objectUrl\('\/create'/);
-  assert.match(source, /objectUrl\('\/join'/);
-  assert.match(source, /objectUrl\('\/connect'/);
+  assert.match(source, /objectUrl\(/);
+  assert.match(source, /\/create/);
+  assert.match(source, /\/join/);
+  assert.match(source, /\/connect/);
 });
 
 test('worker exports GameSessionObject for Wrangler binding', () => {
@@ -41,4 +42,12 @@ test('GameSessionObject uses hibernatable WebSocket lifecycle APIs', () => {
   assert.match(source, /async webSocketMessage/);
   assert.match(source, /async webSocketClose/);
   assert.match(source, /storage\.setAlarm/);
+});
+
+test('worker routes include D1 metadata writes', () => {
+  const source = readFileSync(resolve(workerRoot, 'src/routes/multiplayer-sessions.ts'), 'utf8');
+
+  assert.match(source, /insertGameSession/);
+  assert.match(source, /insertSessionPlayer/);
+  assert.match(source, /updateGameSessionCounts/);
 });

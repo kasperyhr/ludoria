@@ -1,139 +1,67 @@
-# Ludoria
+﻿# Ludoria
 
 Ludoria is a Cloudflare-first TypeScript monorepo for an online game hall where multiplayer board games and solo puzzle games can coexist behind shared contracts.
 
-Phase 4C builds on the Durable Object snapshot work from Phase 4B and migrates multiplayer `Token Bluffing Demo` sockets to Cloudflare Durable Object WebSocket Hibernation:
-
-```text
-sessionId -> Durable Object id -> GameSessionObject
-```
-
-This phase is local-only. It validates hibernatable WebSocket attachments, snapshot recovery shape, idle room checks, and guest token lifecycle with `wrangler dev`; it does not deploy, create real Cloudflare resources, or add D1/R2 persistence. `Sudoku Lite` remains a solo puzzle memory placeholder.
+Phase 5 adds a local D1 metadata layer with Drizzle ORM for platform-level indexing, game catalog persistence, session summaries, and puzzle progress tracking -- while keeping authoritative game state in Durable Objects and hidden information out of D1.
 
 ## Workspace
 
-- `apps/web`: Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
-- `apps/worker`: Cloudflare Workers + Hono shell, split route modules, `GameSessionObject` Durable Object with hibernatable WebSockets, `session:snapshot` storage, lifecycle alarms, and local Sudoku Lite puzzle APIs.
-- `packages/game-engine`: shared multiplayer and solo puzzle engine contracts.
-- `packages/game-definitions`: `token-bluffing-demo` and `sudoku-lite` rule implementations.
-- `packages/protocol`: shared REST/WebSocket protocol types and Valibot runtime validation.
-- `packages/db`: database schema placeholder.
-- `packages/ui`: lightweight UI primitives.
-- `packages/config`: shared config placeholder.
+- pps/web: Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
+- pps/worker: Cloudflare Workers + Hono shell, Durable Object multiplayer sessions, local D1 metadata, and Sudoku Lite puzzle APIs.
+- packages/game-engine: shared multiplayer and solo puzzle engine contracts.
+- packages/game-definitions:   oken-bluffing-demo and sudoku-lite rule implementations.
+- packages/protocol: shared REST/WebSocket protocol types and Valibot runtime validation.
+- packages/db: Drizzle ORM schema, migrations, seed data, and metadata helpers for D1.
+- packages/ui: lightweight UI primitives.
+- packages/config: shared config placeholder.
 
-Valibot is used for the minimal runtime schemas because it is lightweight and sufficient for the current REST/WebSocket transport validation without adding a heavier dependency.
+Valibot is used for minimal runtime schemas; Drizzle ORM manages the D1 schema layer.
 
 ## Install
 
-```powershell
+`powershell
 corepack pnpm install
-```
+`
+
+## Local D1 Setup
+
+`powershell
+cd packages/db
+npx drizzle-kit generate --config drizzle.config.ts
+npx wrangler d1 migrations apply ludoria-db --local
+`
+
+The worker seeds the game catalog automatically on first read if the table is empty.
 
 ## Local Run
 
-Start the Worker with local Durable Object support:
-
-```powershell
+`powershell
 corepack pnpm dev:worker
-```
-
-Default Worker origin:
-
-```text
-http://127.0.0.1:8787
-```
-
-Start the web app:
-
-```powershell
 corepack pnpm dev:web
-```
+`
 
-Default web origin:
-
-```text
-http://127.0.0.1:5173
-```
-
-The web app proxies `/worker-api/*` to `http://127.0.0.1:8787/*`. WebSocket reconnection defaults to:
-
-```text
-ws://127.0.0.1:8787
-```
-
-## API Smoke Tests
-
-```powershell
-curl http://127.0.0.1:8787/health
-curl http://127.0.0.1:8787/api/games
-```
-
-Create a multiplayer Durable Object session:
-
-```powershell
-curl -X POST http://127.0.0.1:8787/api/sessions
-```
-
-Join as a player:
-
-```powershell
-curl -X POST http://127.0.0.1:8787/api/sessions/<sessionId>/join `
-  -H "Content-Type: application/json" `
-  -d "{\"displayName\":\"Alice\",\"role\":\"player\"}"
-```
-
-Join as a spectator:
-
-```powershell
-curl -X POST http://127.0.0.1:8787/api/sessions/<sessionId>/join `
-  -H "Content-Type: application/json" `
-  -d "{\"displayName\":\"Watcher\",\"role\":\"spectator\"}"
-```
-
-Create a Sudoku Lite puzzle session:
-
-```powershell
-curl -X POST http://127.0.0.1:8787/api/puzzles/sudoku-lite/sessions
-```
-
-Apply a Sudoku Lite move:
-
-```powershell
-curl -X POST http://127.0.0.1:8787/api/puzzles/<sessionId>/move `
-  -H "Content-Type: application/json" `
-  -d "{\"row\":0,\"col\":1,\"value\":2}"
-```
-
-## Demo Paths
-
-- `http://127.0.0.1:5173/demo/token-bluffing`
-- `http://127.0.0.1:5173/demo/sudoku-lite`
-
-## Snapshot Recovery Checks
-
-Phase 4C recovery is covered by tests for snapshot serialization, token hashes, token expiry, revoked-token handling, hibernation attachment validation, room lifecycle transitions, and safe player/spectator views after restoring from snapshot state.
-
-Local smoke should also create a Token Bluffing session, join player and spectator, connect WebSockets, submit `DECLARE_TOKEN_COUNT`, send `KEEP_ALIVE`, and confirm the spectator snapshot does not contain `hiddenTokens`.
+Default origins: http://127.0.0.1:8787 (worker) and http://127.0.0.1:5173 (web).
+The web app proxies /worker-api/* to the worker.
 
 ## Quality Commands
 
-```powershell
+`powershell
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test
 corepack pnpm build
-```
+`
 
-## Architecture Principles
+## Data Boundaries
 
-Multiplayer games follow `Command -> Validate -> Event -> State -> View`. Full hidden state stays inside the server-authoritative session object; clients receive only role-safe views from `getPlayerView` or `getSpectatorView`.
-
-Solo puzzles follow `Puzzle -> Progress -> Move -> Completion`. React components display public puzzle data and submit moves; puzzle rules, hinting, and completion checks live in `packages/game-definitions`.
+- **Durable Object storage**: authoritative multiplayer game state, hidden tokens, session snapshots, WebSocket attachments.
+- **D1**: platform metadata (game catalog, session summaries, player rosters, puzzle progress). Never contains hidden state, raw tokens, or solutions.
+- **R2**: reserved for future image/card/token assets.
 
 ## Still Placeholder
 
-- `GameSessionObject` stores a minimal `session:snapshot` in Durable Object storage and uses alarms for idle checks, but there is still no D1 session metadata, account system, or full production recovery policy.
-- Session tokens are returned to clients once and stored only as SHA-256 hashes with a 24-hour expiry. Revocation exists as an actor method, but no user-facing account/session management UI exists yet.
-- Sudoku Lite sessions remain a Worker-local memory placeholder.
-- There is no real account system, lobby lifecycle, match history, D1, R2, or deployed Cloudflare resource.
-- `solutionHash` is a placeholder string until persistent puzzle generation and verification are introduced.
+- No deployed Cloudflare resources (local-only wrangler dev).
+- No real account system, OAuth, or lobby lifecycle.
+- solutionHash is a placeholder string.
+- Sudoku Lite sessions still use Worker memory (not Durable Objects).
+- D1 writes are best-effort; failures log warnings without breaking game operations.

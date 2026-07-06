@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 ## Phase 0: Bootstrap
 
@@ -10,76 +10,42 @@ Make the web and Worker apps run locally with basic navigation, a health API, a 
 
 ## Phase 2: Demo Multiplayer Game
 
-Implement `Token Bluffing Demo` to validate:
-
-- local session actor shape
-- WebSocket session flow
-- command validation
-- public events
-- server-authoritative hidden state
-- safe player and spectator view projection
+Implement Token Bluffing Demo to validate local session actor shape, WebSocket session flow, command validation, public events, server-authoritative hidden state, and safe player/spectator view projection.
 
 ## Phase 3: Demo Solo Puzzle
 
-Implemented `Sudoku Lite` to validate:
-
-- `Puzzle -> Progress -> Move -> Completion`
-- public puzzle projection without solution leakage
-- locked givens
-- move validation
-- progress updates
-- hint endpoint
-- completion check endpoint
-- minimal protocol runtime validation with Valibot
+Implement Sudoku Lite to validate Puzzle -> Progress -> Move -> Completion, public puzzle projection without solution leakage, locked givens, move validation, hint endpoint, completion check, and Valibot runtime validation.
 
 ## Phase 4A: Durable Object Runtime Boundary
 
-Migrate multiplayer Token Bluffing sessions from a Worker-global memory map to `GameSessionObject` Durable Objects for local `wrangler dev`.
-
-Validated goals:
-
-- deterministic `sessionId -> Durable Object id` routing
-- per-session authoritative multiplayer state
-- WebSocket connect through Durable Object
-- heartbeat, chat, submit command, and reconnect snapshot still handled by the session object
-- Sudoku Lite remains a local solo puzzle placeholder
-
-Phase 4A does not deploy and does not create real Cloudflare resources.
+Migrate multiplayer Token Bluffing sessions from Worker-global memory map to GameSessionObject Durable Objects for local wrangler dev.
 
 ## Phase 4B: Durable Object Session Snapshots
 
-Implemented local Durable Object storage snapshots for Token Bluffing sessions:
-
-- `session:snapshot` with versioned authoritative game state
-- participant token hashes instead of raw tokens
-- 24-hour guest token expiry
-- optional revoked token field and actor revoke method
-- recent chat message trimming
-- snapshot serialization/restoration tests
-
-Phase 4B still does not deploy, create D1/R2 resources, or add a complete account system.
+Add DO storage snapshots, participant token hashes, 24-hour guest token expiry, revoked-token support, and chat message trimming.
 
 ## Phase 4C: Recovery Policy and Metadata Boundaries
 
-Implemented local Durable Object recovery/lifecycle hardening:
+Migrate to WebSocket Hibernation, add per-socket attachment identity, add RoomStatus/KEEP_ALIVE/IDLE_CHECK/ROOM_STATUS_CHANGED, room lifecycle fields, idle alarm scheduling, and basic abandoned-room policy.
 
-- migrated Token Bluffing WebSockets to Durable Object WebSocket Hibernation
-- persisted per-socket attachment identity with `sessionId`, `actorId`, `role`, and `sessionTokenHash`
-- restored wakeup context from attachment plus `session:snapshot`
-- added `RoomStatus`, `KEEP_ALIVE`, `IDLE_CHECK`, and `ROOM_STATUS_CHANGED`
-- added room lifecycle fields, idle alarm scheduling, and basic abandoned-room policy
-- kept Sudoku Lite untouched as a solo puzzle placeholder
+## Phase 5: D1 Metadata Layer
+
+Add Cloudflare D1 + Drizzle ORM for platform-level metadata:
+
+- 9 Drizzle schema tables (users, guest_sessions, game_catalog, game_sessions, session_players, session_invites, puzzle_sessions, puzzle_progress, review_summaries)
+- Drizzle Kit migration generation
+- Seed data for game catalog (Token Bluffing Demo, Sudoku Lite, Nonogram)
+- Metadata helper functions for D1 reads/writes
+- Worker routes updated to write platform metadata on session create/join and puzzle create/move/check
+- D1 writes are best-effort with fallback; failures do not break game operations
+- D1 never contains hidden state, raw tokens, or Sudoku solutions
 
 Remaining future work:
 
-- decide D1 schema for lobby/session metadata
-- add stronger local DO integration tests with Cloudflare's workers test pool
-- define deployment rollback and migration practice
-- keep R2 out until asset or replay storage has a clear use case
-
-## Phase 5: Polish UI
-
-Refine the game hall into a premium board game lounge experience with responsive layouts, stronger game cards, cleaner session ergonomics, and visual QA.
+- Connect Sudoku Lite sessions to Durable Objects or D1 for persistence
+- Add real account system and OAuth
+- Deploy to Cloudflare with production D1/Durable Objects/R2
+- Add stronger D1 integration tests
 
 ## Phase 6: Real Games
 

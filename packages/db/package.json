@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "@ludoria/db",
   "version": "0.0.0",
   "private": true,
@@ -8,6 +8,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate:local": "wrangler d1 migrations apply ludoria-db --local"
+  },
+  "dependencies": {
+    "@ludoria/protocol": "workspace:*",
+    "drizzle-orm": "^0.44.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.7"
   }
 }
