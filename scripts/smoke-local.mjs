@@ -204,7 +204,7 @@ try {
 
 try {
   const { json: hint } = await fetchJson(`/api/puzzles/${puzzleSessionId}/hint`, { method: 'POST' });
-  ok('Sudoku Lite hint returned', hint.hint !== null || true);
+  ok('Sudoku Lite hint returned', hint && typeof hint.hint === 'object');
 } catch (err) {
   ok('Sudoku Lite hint', false, err.message);
 }

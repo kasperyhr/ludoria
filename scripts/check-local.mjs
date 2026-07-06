@@ -57,7 +57,7 @@ check('.env.example exists', () => {
 
 check('package.json has required scripts', () => {
   const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
-  const required = ['dev:web', 'dev:worker', 'typecheck', 'test', 'build'];
+  const required = ['dev:web', 'dev:worker', 'typecheck', 'test', 'build', 'check:local', 'db:migrate:local', 'db:seed:local', 'smoke:local'];
   for (const script of required) {
     if (!pkg.scripts[script]) throw new Error(`missing script: ${script}`);
   }

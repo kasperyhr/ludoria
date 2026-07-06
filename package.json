@@ -11,7 +11,7 @@
     "typecheck": "corepack pnpm -r --workspace-concurrency=1 run typecheck",
     "lint": "node scripts/lint.mjs",
     "test": "corepack pnpm -r --workspace-concurrency=1 run test",
-    "db:migrate:local": "wrangler d1 migrations apply ludoria-db --local",
+    "db:migrate:local": "wrangler d1 migrations apply ludoria-db --local --config apps/worker/wrangler.toml",
     "db:seed:local": "node scripts/seed-d1.mjs",
     "smoke:local": "node scripts/smoke-local.mjs",
     "check:local": "node scripts/check-local.mjs"
