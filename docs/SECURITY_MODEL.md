@@ -6,13 +6,15 @@ Multiplayer games must keep hidden state (tokens, hands, private roles) server-a
 
 ## D1 Metadata Safety
 
-Phase 5 introduces a D1 metadata layer. The following rules apply:
-
-- D1 game_sessions stores session index metadata only (counts, status, timestamps). It never stores the full authoritative GameState.
-- D1 session_players stores display names and roles. It never stores hidden tokens, hands, or private information.
-- D1 puzzle_progress stores player-filled cells as JSON. It never stores Sudoku solutions.
+- D1 game_sessions stores session index metadata only (counts, status, timestamps). Never stores the full authoritative GameState.
+- D1 session_players stores display names and roles. Never stores hidden tokens, hands, or private information.
+- D1 puzzle_progress stores player-filled cells as JSON. Never stores Sudoku solutions.
 - D1 never stores raw session tokens. If tokens are referenced, only SHA-256 hashes are stored.
 - D1 writes are best-effort. If a D1 write fails, the game operation continues and a warning is logged.
+
+## Automated Security Scans
+
+Run `corepack pnpm test` to execute the security boundary scan (`packages/db/test/security-scan.test.mjs`), which checks D1 schema, migrations, and worker services for forbidden fields: hiddenTokens, rawToken, sessionToken, fullState, gameState.
 
 ## Session Token Lifecycle
 

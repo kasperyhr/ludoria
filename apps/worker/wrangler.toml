@@ -1,12 +1,19 @@
+# Ludoria Worker - local development configuration
+# Do not deploy with this file directly; review wrangler.example.toml first.
+
 name = "ludoria-worker"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
 
+# --- D1 (platform metadata) ---
+# database_id is a placeholder for local dev only.
+# Replace with your real D1 database_id before deploying.
 [[d1_databases]]
 binding = "DB"
 database_name = "ludoria-db"
 database_id = "local-ludoria-db-placeholder"
 
+# --- Durable Objects (multiplayer sessions) ---
 [[durable_objects.bindings]]
 name = "GAME_SESSION_OBJECT"
 class_name = "GameSessionObject"

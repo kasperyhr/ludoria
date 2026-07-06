@@ -1,101 +1,65 @@
-# Deployment Plan
+# Deployment
 
-Phase 4C is local-only. Do not deploy, create real Cloudflare resources, modify DNS, or create paid resources for this phase.
+Phase 6 is local-only. This document explains how to run locally and what deployment will look like.
 
 ## Local Development
 
-Install dependencies:
-
 ```powershell
+# Environment check
+corepack pnpm check:local
+
+# Install
 corepack pnpm install
-```
 
-Start the Worker with local Durable Object support:
-
-```powershell
+# Start Worker (includes local D1 + Durable Objects)
 corepack pnpm dev:worker
-```
 
-Start the web app:
-
-```powershell
+# Start Web
 corepack pnpm dev:web
+
+# First-time D1 setup
+corepack pnpm db:migrate:local
+corepack pnpm db:seed:local
+
+# Smoke test (requires running Worker)
+corepack pnpm smoke:local
 ```
 
-You can also start both:
+## Local Wrangler Configuration
 
-```powershell
-corepack pnpm dev
-```
+`apps/worker/wrangler.toml` is configured for local `wrangler dev`:
 
-## Local Origins
+- **D1**: `ludoria-db` with placeholder `database_id` (`local-ludoria-db-placeholder`).
+- **Durable Objects**: `GAME_SESSION_OBJECT` bound to `GameSessionObject` class, migration tag `v1`.
+- **R2**: not configured.
 
-Worker:
-
-```text
-http://127.0.0.1:8787
-```
-
-Web:
-
-```text
-http://127.0.0.1:5173
-```
-
-The web app uses the Vite proxy to send `/worker-api/*` to the local Worker.
-
-## Health Check
-
-```powershell
-curl http://127.0.0.1:8787/health
-```
-
-Expected phase:
-
-```json
-{
-  "ok": true,
-  "service": "ludoria-worker",
-  "phase": "phase-4c"
-}
-```
-
-## Durable Object Local Binding
-
-`apps/worker/wrangler.toml` configures one local Durable Object binding used by `corepack pnpm dev:worker`:
-
-```toml
-[[durable_objects.bindings]]
-name = "GAME_SESSION_OBJECT"
-class_name = "GameSessionObject"
-```
-
-This lets `wrangler dev` route multiplayer sessions through `GameSessionObject`. It does not create a real production Durable Object resource until someone explicitly deploys.
-
-Phase 4C uses Durable Object storage locally through the `session:snapshot` key and Durable Object alarms for idle room checks. No D1 or R2 binding is configured.
-
-## Local Recovery Smoke
-
-Manual recovery validation should cover:
-
-1. Create a Token Bluffing session.
-2. Join a player and spectator.
-3. Connect both WebSockets and confirm `SESSION_SNAPSHOT`.
-4. Submit `DECLARE_TOKEN_COUNT`.
-5. Send `KEEP_ALIVE` over WebSocket and confirm a fresh safe snapshot.
-6. Confirm spectator payload contains `declaredToken` and no `hiddenTokens`.
-7. Confirm tests cover hibernation attachment validation, snapshot serialization, token hashes, token expiry, revoked-token behavior, and lifecycle transitions.
-
-## Example Config
-
-The root `wrangler.example.toml` mirrors the local shape and documents what must be reviewed before a real deployment: names, migration tags, account settings, environment bindings, and future D1/R2 resources.
+`wrangler.example.toml` in the repo root shows what changes are needed for Cloudflare preview/production deployment.
 
 ## Future Cloudflare Deployment Steps
 
-Phase 4D or later should:
+1. Authenticate: `wrangler login`
+2. Create D1 database: `wrangler d1 create ludoria-db`
+3. Update `database_id` in `apps/worker/wrangler.toml`
+4. Apply migrations: `wrangler d1 migrations apply ludoria-db`
+5. Seed game catalog (or rely on auto-seed)
+6. Deploy: `wrangler deploy`
+7. Verify: `curl https://<your-worker>.<your-subdomain>.workers.dev/health`
 
-- decide whether to move platform metadata to D1
-- add D1 schema and migrations for session metadata
-- define production environment bindings
-- add Wrangler deployment checks
-- document rollback and migration practices
+See `docs/PREVIEW_DEPLOY_CHECKLIST.md` for the full pre-deploy checklist.
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and adjust. For Cloudflare deployment, secrets are set via:
+
+```powershell
+wrangler secret put <NAME>
+```
+
+No secrets are required for local development.
+
+## What is Not Deployed
+
+- No real Cloudflare resources exist yet.
+- No real D1 database, no real Durable Objects, no real R2.
+- No DNS records are configured.
+- Everything runs locally via `wrangler dev --local`.

@@ -1,130 +1,37 @@
 # Database Schema
 
-Phase 5 introduces a local D1 metadata layer managed through Drizzle ORM. The schema lives in packages/db/src/schema.ts, migrations in packages/db/migrations/, and seed data in packages/db/src/seed-data.ts.
+Phase 5 introduced a local D1 metadata layer managed through Drizzle ORM. Phase 6 adds indexes, migration automation, and a seed script.
 
-## D1 Tables
+## Schema Location
 
-### users
-Platform user metadata (placeholder for future account system).
+- `packages/db/src/schema.ts` -- Drizzle ORM schema (9 tables, 12 indexes)
+- `packages/db/migrations/0000_initial_metadata.sql` -- initial table creation
+- `packages/db/migrations/0001_add_metadata_indexes.sql` -- index creation
+- `packages/db/src/seed-data.ts` -- game catalog seed data
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| display_name | text NOT NULL | |
-| created_at | text NOT NULL | ISO datetime |
-| updated_at | text NOT NULL | ISO datetime |
+## Running Migrations Locally
 
-### guest_sessions
-Guest identity metadata. Does not store raw tokens.
+```powershell
+corepack pnpm db:migrate:local
+```
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| display_name | text NOT NULL | |
-| created_at | text NOT NULL | |
-| expires_at | text | |
-| revoked_at | text | |
+## Seeding Locally
 
-### game_catalog
-Game directory entries.
+```powershell
+corepack pnpm db:seed:local
+```
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| name | text NOT NULL | |
-| mode | text NOT NULL | multiplayer or solo |
-| status | text NOT NULL | planned, preview, or available |
-| description | text NOT NULL | |
-| player_count_label | text NOT NULL | |
-| created_at | text NOT NULL | |
-| updated_at | text NOT NULL | |
+The worker also auto-seeds the game_catalog on first `/api/games` read if the table is empty.
 
-### game_sessions
-Multiplayer session index. Does not store full GameState, hidden tokens, or raw session tokens.
+## Tables
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | session ID |
-| game_id | text NOT NULL | |
-| status | text NOT NULL | |
-| room_status | text NOT NULL | active, idle_checking, closed, abandoned |
-| created_at | text NOT NULL | |
-| updated_at | text NOT NULL | |
-| expires_at | text | |
-| closed_at | text | |
-| participant_count | integer NOT NULL | |
-| spectator_count | integer NOT NULL | |
-| durable_object_name | text | DO name for routing |
+9 tables: users, guest_sessions, game_catalog, game_sessions, session_players, session_invites, puzzle_sessions, puzzle_progress, review_summaries.
 
-### session_players
-Participant summary. Does not store hidden tokens or raw tokens.
+See `packages/db/src/schema.ts` for the authoritative column definitions.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| session_id | text FK | references game_sessions |
-| actor_id | text NOT NULL | |
-| display_name | text NOT NULL | |
-| role | text NOT NULL | player or spectator |
-| joined_at | text NOT NULL | |
-| left_at | text | |
+## Indexes
 
-### session_invites
-Future invite code metadata. Does not store plaintext codes.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| session_id | text FK | references game_sessions |
-| invite_code_hash | text NOT NULL | |
-| created_at | text NOT NULL | |
-| expires_at | text | |
-| revoked_at | text | |
-
-### puzzle_sessions
-Solo puzzle metadata. Does not store solutions.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| game_id | text NOT NULL | |
-| puzzle_id | text NOT NULL | |
-| status | text NOT NULL | active, completed, abandoned |
-| created_at | text NOT NULL | |
-| updated_at | text NOT NULL | |
-| completed_at | text | set when solved |
-| move_count | integer NOT NULL | |
-
-### puzzle_progress
-Player progress. progress_json must not contain solution data.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| puzzle_session_id | text FK | references puzzle_sessions |
-| progress_json | text NOT NULL | player-filled cells, no solution |
-| updated_at | text NOT NULL | |
-
-### review_summaries
-Future match review. summary_json must not leak pre-game-end hidden information.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | text PK | |
-| session_id | text NOT NULL | |
-| game_id | text NOT NULL | |
-| summary_json | text NOT NULL | |
-| created_at | text NOT NULL | |
-
-## Migrations
-
-`powershell
-cd packages/db
-npx drizzle-kit generate --config drizzle.config.ts
-npx wrangler d1 migrations apply ludoria-db --local
-`
-
-The initial migration (0000_initial_metadata.sql) creates all 9 tables.
+12 indexes on: game_catalog(mode, status), game_sessions(game_id, status, room_status), session_players(session_id, actor_id), session_invites(session_id), puzzle_sessions(game_id, status), puzzle_progress(puzzle_session_id), review_summaries(session_id).
 
 ## What D1 Never Stores
 

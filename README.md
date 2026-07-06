@@ -2,55 +2,71 @@
 
 Ludoria is a Cloudflare-first TypeScript monorepo for an online game hall where multiplayer board games and solo puzzle games can coexist behind shared contracts.
 
-Phase 5 adds a local D1 metadata layer with Drizzle ORM for platform-level indexing, game catalog persistence, session summaries, and puzzle progress tracking -- while keeping authoritative game state in Durable Objects and hidden information out of D1.
+Phase 6 prepares the project for local deployment readiness: clean configuration, repeatable D1 migration/seed scripts, a comprehensive local smoke test, an environment check script, a security boundary scan, and a preview deploy checklist.
 
 ## Workspace
 
-- pps/web: Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
-- pps/worker: Cloudflare Workers + Hono shell, Durable Object multiplayer sessions, local D1 metadata, and Sudoku Lite puzzle APIs.
-- packages/game-engine: shared multiplayer and solo puzzle engine contracts.
-- packages/game-definitions:   oken-bluffing-demo and sudoku-lite rule implementations.
-- packages/protocol: shared REST/WebSocket protocol types and Valibot runtime validation.
-- packages/db: Drizzle ORM schema, migrations, seed data, and metadata helpers for D1.
-- packages/ui: lightweight UI primitives.
-- packages/config: shared config placeholder.
-
-Valibot is used for minimal runtime schemas; Drizzle ORM manages the D1 schema layer.
+- `apps/web` -- Vite + React runnable shell, game catalog, Token Bluffing Demo UI, and Sudoku Lite UI.
+- `apps/worker` -- Cloudflare Workers + Hono shell, Durable Object multiplayer sessions, local D1 metadata, and Sudoku Lite puzzle APIs.
+- `packages/game-engine` -- shared multiplayer and solo puzzle engine contracts.
+- `packages/game-definitions` -- `token-bluffing-demo` and `sudoku-lite` rule implementations.
+- `packages/protocol` -- shared REST/WebSocket protocol types and Valibot runtime validation.
+- `packages/db` -- Drizzle ORM schema, migrations, seed data, and metadata helpers for D1.
+- `packages/ui` -- lightweight UI primitives (Button, Card, Badge).
+- `packages/config` -- shared config placeholder.
+- `scripts/` -- lint, smoke test, environment check, D1 seed.
 
 ## Install
 
-`powershell
+```powershell
 corepack pnpm install
-`
+```
 
-## Local D1 Setup
+## Local Development Quick Start
 
-`powershell
-cd packages/db
-npx drizzle-kit generate --config drizzle.config.ts
-npx wrangler d1 migrations apply ludoria-db --local
-`
+```powershell
+# 1. Check your environment
+corepack pnpm check:local
 
-The worker seeds the game catalog automatically on first read if the table is empty.
-
-## Local Run
-
-`powershell
+# 2. Start the Worker (with local D1 + Durable Objects)
 corepack pnpm dev:worker
+
+# 3. In another terminal, start the web app
 corepack pnpm dev:web
-`
 
-Default origins: http://127.0.0.1:8787 (worker) and http://127.0.0.1:5173 (web).
-The web app proxies /worker-api/* to the worker.
+# 4. Run local D1 migrations (first time only)
+corepack pnpm db:migrate:local
 
-## Quality Commands
+# 5. Seed the game catalog (or the worker auto-seeds on first /api/games read)
+corepack pnpm db:seed:local
 
-`powershell
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test
-corepack pnpm build
-`
+# 6. Run smoke tests
+corepack pnpm smoke:local
+```
+
+Default origins: `http://127.0.0.1:8787` (worker), `http://127.0.0.1:5173` (web).
+The web app proxies `/worker-api/*` to the worker.
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev:web` | Start Vite dev server |
+| `pnpm dev:worker` | Start Wrangler dev server (local DO + D1) |
+| `pnpm dev` | Start both in parallel |
+| `pnpm lint` | Run lint checks |
+| `pnpm typecheck` | Run TypeScript type checking |
+| `pnpm test` | Run all unit tests |
+| `pnpm build` | Build all packages |
+| `pnpm check:local` | Verify local environment readiness |
+| `pnpm db:migrate:local` | Apply D1 migrations locally |
+| `pnpm db:seed:local` | Seed local D1 game_catalog |
+| `pnpm smoke:local` | Run local smoke test (requires running Worker) |
+
+## Demo Paths
+
+- `http://127.0.0.1:5173/demo/token-bluffing`
+- `http://127.0.0.1:5173/demo/sudoku-lite`
 
 ## Data Boundaries
 
@@ -60,8 +76,8 @@ corepack pnpm build
 
 ## Still Placeholder
 
-- No deployed Cloudflare resources (local-only wrangler dev).
+- No deployed Cloudflare resources (local-only `wrangler dev`).
 - No real account system, OAuth, or lobby lifecycle.
-- solutionHash is a placeholder string.
+- `solutionHash` is a placeholder string.
 - Sudoku Lite sessions still use Worker memory (not Durable Objects).
 - D1 writes are best-effort; failures log warnings without breaking game operations.

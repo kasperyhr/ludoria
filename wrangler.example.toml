@@ -1,11 +1,22 @@
+# Ludoria Worker - example configuration for Cloudflare preview/production deployment.
+# Copy this to apps/worker/wrangler.toml and replace placeholders before deploying.
+
 name = "ludoria-worker"
 main = "apps/worker/src/index.ts"
 compatibility_date = "2026-06-01"
 
-# Phase 4A local development only.
-# This binding routes multiplayer Token Bluffing sessions into Durable Objects.
-# Do not deploy or create real Cloudflare resources from this example without
-# reviewing names, migration tags, account settings, and environment bindings.
+# --- D1 (platform metadata) ---
+# 1. Create a D1 database: wrangler d1 create ludoria-db
+# 2. Copy the returned database_id here.
+# 3. Apply migrations: wrangler d1 migrations apply ludoria-db
+# 4. Seed the game catalog (the worker auto-seeds on first read).
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ludoria-db"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+# --- Durable Objects (multiplayer sessions) ---
 [[durable_objects.bindings]]
 name = "GAME_SESSION_OBJECT"
 class_name = "GameSessionObject"
@@ -14,5 +25,9 @@ class_name = "GameSessionObject"
 tag = "v1"
 new_classes = ["GameSessionObject"]
 
-# Future production phases may add D1/R2 bindings here.
-# Phase 4A intentionally does not configure real D1 or R2 resources.
+# --- R2 (future: images, card art, tokens) ---
+# Not configured yet. Add R2 bindings when asset storage is needed.
+
+# --- Secrets ---
+# Set via: wrangler secret put <NAME>
+# No secrets are currently required for local development.

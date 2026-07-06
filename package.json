@@ -10,7 +10,11 @@
     "build": "corepack pnpm -r --workspace-concurrency=1 run build",
     "typecheck": "corepack pnpm -r --workspace-concurrency=1 run typecheck",
     "lint": "node scripts/lint.mjs",
-    "test": "corepack pnpm -r --workspace-concurrency=1 run test"
+    "test": "corepack pnpm -r --workspace-concurrency=1 run test",
+    "db:migrate:local": "wrangler d1 migrations apply ludoria-db --local",
+    "db:seed:local": "node scripts/seed-d1.mjs",
+    "smoke:local": "node scripts/smoke-local.mjs",
+    "check:local": "node scripts/check-local.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.2",
