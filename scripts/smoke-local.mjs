@@ -4,6 +4,13 @@
 // If the Worker is not running, this test will fail early with a clear message.
 
 const WORKER_ORIGIN = process.env.LUDORIA_WORKER_ORIGIN ?? 'http://127.0.0.1:8787';
+const isPreview = WORKER_ORIGIN.startsWith('https://');
+
+if (isPreview) {
+  console.log('Mode: PREVIEW (remote)');
+} else {
+  console.log('Mode: LOCAL');
+}
 
 let passed = 0;
 let failed = 0;
@@ -69,7 +76,7 @@ try {
   ok('/health service is ludoria-worker', health.service === 'ludoria-worker');
 } catch (err) {
   ok('Worker is reachable at ' + WORKER_ORIGIN, false, err.message);
-  console.log('\nMake sure the Worker is running: corepack pnpm dev:worker');
+  if (!isPreview) console.log('\nMake sure the Worker is running: corepack pnpm dev:worker');
   process.exit(1);
 }
 

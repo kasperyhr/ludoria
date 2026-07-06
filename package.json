@@ -11,10 +11,13 @@
     "typecheck": "corepack pnpm -r --workspace-concurrency=1 run typecheck",
     "lint": "node scripts/lint.mjs",
     "test": "corepack pnpm -r --workspace-concurrency=1 run test",
+    "check:local": "node scripts/check-local.mjs",
+    "check:preview-config": "node scripts/check-preview-config.mjs",
     "db:migrate:local": "wrangler d1 migrations apply ludoria-db --local --config apps/worker/wrangler.toml",
     "db:seed:local": "node scripts/seed-d1.mjs",
     "smoke:local": "node scripts/smoke-local.mjs",
-    "check:local": "node scripts/check-local.mjs"
+    "smoke:preview": "node scripts/smoke-local.mjs",
+    "preview:plan": "node scripts/preview-plan.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.2",

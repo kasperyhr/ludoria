@@ -8,8 +8,8 @@ compatibility_date = "2026-06-01"
 # --- D1 (platform metadata) ---
 # 1. Create a D1 database: wrangler d1 create ludoria-db
 # 2. Copy the returned database_id here.
-# 3. Apply migrations: wrangler d1 migrations apply ludoria-db
-# 4. Seed the game catalog (the worker auto-seeds on first read).
+# 3. Apply migrations: wrangler d1 migrations apply ludoria-db --remote
+# 4. Seed the game catalog (the worker auto-seeds on first /api/games read).
 
 [[d1_databases]]
 binding = "DB"
@@ -24,6 +24,26 @@ class_name = "GameSessionObject"
 [[migrations]]
 tag = "v1"
 new_classes = ["GameSessionObject"]
+
+# --- Preview Environment (optional) ---
+# If you prefer a separate preview environment, uncomment the block below
+# and add the real preview database_id.
+#
+# [env.preview]
+# name = "ludoria-worker-preview"
+#
+# [[env.preview.d1_databases]]
+# binding = "DB"
+# database_name = "ludoria-preview-db"
+# database_id = "REPLACE_WITH_PREVIEW_DATABASE_ID"
+#
+# [[env.preview.durable_objects.bindings]]
+# name = "GAME_SESSION_OBJECT"
+# class_name = "GameSessionObject"
+#
+# [[env.preview.migrations]]
+# tag = "v1"
+# new_classes = ["GameSessionObject"]
 
 # --- R2 (future: images, card art, tokens) ---
 # Not configured yet. Add R2 bindings when asset storage is needed.
