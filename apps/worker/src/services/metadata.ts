@@ -1,4 +1,4 @@
-﻿import { drizzle } from "drizzle-orm/d1";
+import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@ludoria/db";
 import type { MetadataDb } from "@ludoria/db";
 

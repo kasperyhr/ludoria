@@ -1,12 +1,19 @@
-﻿{
+{
   "version": "7",
   "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
       "version": "6",
-      "when": 1783326385260,
-      "tag": "0000_simple_miss_america",
+      "when": 1757006893459,
+      "tag": "0000_initial_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1757007000000,
+      "tag": "0001_add_metadata_indexes",
       "breakpoints": true
     }
   ]

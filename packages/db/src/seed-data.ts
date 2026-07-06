@@ -1,4 +1,4 @@
-﻿import { gameCatalog } from './schema';
+import { gameCatalog } from './schema';
 import type { InferInsertModel } from 'drizzle-orm';
 
 export const seedGameCatalog: InferInsertModel<typeof gameCatalog>[] = [

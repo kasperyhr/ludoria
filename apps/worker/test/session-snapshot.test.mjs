@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 // TODO(pre-phase-5): Switch to '@ludoria/game-definitions' once all
 // packages use explicit '.ts' extensions in ESM re-exports. Node's

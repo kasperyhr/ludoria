@@ -1,4 +1,4 @@
-﻿# Ludoria Codex Rules
+# Ludoria Codex Rules
 
 1. 请全程用中文和用户交流，除非代码、命令、文件名、API 名称必须使用英文。
 2. 这个项目不是普通 CRUD 网站，而是“多人桌游 + 单人益智游戏”的在线 Game Hub。

@@ -1,4 +1,4 @@
-﻿# Ludoria
+# Ludoria
 
 Ludoria is a Cloudflare-first TypeScript monorepo for an online game hall where multiplayer board games and solo puzzle games can coexist behind shared contracts.
 

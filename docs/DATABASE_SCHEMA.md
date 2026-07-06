@@ -1,4 +1,4 @@
-﻿# Database Schema
+# Database Schema
 
 Phase 5 introduces a local D1 metadata layer managed through Drizzle ORM. The schema lives in packages/db/src/schema.ts, migrations in packages/db/migrations/, and seed data in packages/db/src/seed-data.ts.
 

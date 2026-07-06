@@ -1,11 +1,10 @@
-﻿import { eq, sql } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import * as schema from './schema';
+import { eq, sql } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import * as schema from "./schema";
 import type {
   GameCatalogItem,
-  RoomStatus,
   SessionRole,
-} from '@ludoria/protocol';
+} from "@ludoria/protocol";
 
 export type MetadataDb = DrizzleD1Database<typeof schema>;
 
@@ -15,8 +14,8 @@ export async function getGameCatalogFromDb(db: MetadataDb): Promise<GameCatalogI
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
-    mode: row.mode as GameCatalogItem['mode'],
-    status: row.status as GameCatalogItem['status'],
+    mode: row.mode as GameCatalogItem["mode"],
+    status: row.status as GameCatalogItem["status"],
     description: row.description,
     playerCountLabel: row.playerCountLabel,
   }));
@@ -29,7 +28,7 @@ export async function seedGameCatalogIfEmpty(db: MetadataDb): Promise<number> {
     return 0;
   }
 
-  const { seedGameCatalog } = await import('./seed-data');
+  const { seedGameCatalog } = await import("./seed-data");
   let inserted = 0;
 
   for (const entry of seedGameCatalog) {
@@ -51,8 +50,8 @@ export async function insertGameSession(db: MetadataDb, params: InsertGameSessio
   await db.insert(schema.gameSessions).values({
     id: params.id,
     gameId: params.gameId,
-    status: 'active',
-    roomStatus: 'active',
+    status: "active",
+    roomStatus: "active",
     durableObjectName: params.durableObjectName,
     expiresAt: params.expiresAt ?? null,
   }).onConflictDoNothing().run();
@@ -63,18 +62,7 @@ export async function updateGameSessionCounts(
   sessionId: string,
   deltas: { participantDelta?: number; spectatorDelta?: number }
 ) {
-  const set: Record<string, unknown> = {};
-  const additive: string[] = [];
-
-  if (deltas.participantDelta) {
-    additive.push(`participant_count + ${deltas.participantDelta}`);
-  }
-
-  if (deltas.spectatorDelta) {
-    additive.push(`spectator_count + ${deltas.spectatorDelta}`);
-  }
-
-  if (additive.length === 0) {
+  if (!deltas.participantDelta && !deltas.spectatorDelta) {
     return;
   }
 
@@ -117,7 +105,7 @@ export async function insertPuzzleSession(db: MetadataDb, params: InsertPuzzleSe
     id: params.id,
     gameId: params.gameId,
     puzzleId: params.puzzleId,
-    status: 'active',
+    status: "active",
   }).onConflictDoNothing().run();
 }
 
@@ -159,7 +147,7 @@ export async function markPuzzleCompleted(
   const now = new Date().toISOString();
 
   await db.update(schema.puzzleSessions)
-    .set({ status: 'completed', completedAt: now, updatedAt: now })
+    .set({ status: "completed", completedAt: now, updatedAt: now })
     .where(eq(schema.puzzleSessions.id, puzzleSessionId))
     .run();
 }

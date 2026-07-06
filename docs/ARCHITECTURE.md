@@ -1,4 +1,4 @@
-﻿# Architecture
+# Architecture
 
 Ludoria is a Cloudflare-first TypeScript monorepo. The web shell lives in apps/web, the Worker/BFF lives in apps/worker, and shared contracts live in packages/*.
 

@@ -1,4 +1,4 @@
-﻿# Security Model
+# Security Model
 
 ## Hidden Information
 

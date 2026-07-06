@@ -1,7 +1,7 @@
 ﻿{
   "version": "6",
   "dialect": "sqlite",
-  "id": "0014794c-3ee5-491f-a2ff-10add9864d50",
+  "id": "992d97f3-7077-41c9-941b-feaabc1a21a3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "game_catalog": {
@@ -64,7 +64,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_game_catalog_mode": {
+          "name": "idx_game_catalog_mode",
+          "columns": [
+            "mode"
+          ],
+          "isUnique": false
+        },
+        "idx_game_catalog_status": {
+          "name": "idx_game_catalog_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -151,7 +166,29 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_game_sessions_game_id": {
+          "name": "idx_game_sessions_game_id",
+          "columns": [
+            "game_id"
+          ],
+          "isUnique": false
+        },
+        "idx_game_sessions_status": {
+          "name": "idx_game_sessions_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_game_sessions_room_status": {
+          "name": "idx_game_sessions_room_status",
+          "columns": [
+            "room_status"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -234,7 +271,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_puzzle_progress_session_id": {
+          "name": "idx_puzzle_progress_session_id",
+          "columns": [
+            "puzzle_session_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "puzzle_progress_puzzle_session_id_puzzle_sessions_id_fk": {
           "name": "puzzle_progress_puzzle_session_id_puzzle_sessions_id_fk",
@@ -314,7 +359,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_puzzle_sessions_game_id": {
+          "name": "idx_puzzle_sessions_game_id",
+          "columns": [
+            "game_id"
+          ],
+          "isUnique": false
+        },
+        "idx_puzzle_sessions_status": {
+          "name": "idx_puzzle_sessions_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -359,7 +419,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_review_summaries_session_id": {
+          "name": "idx_review_summaries_session_id",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -411,7 +479,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_session_invites_session_id": {
+          "name": "idx_session_invites_session_id",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "session_invites_session_id_game_sessions_id_fk": {
           "name": "session_invites_session_id_game_sessions_id_fk",
@@ -484,7 +560,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_session_players_session_id": {
+          "name": "idx_session_players_session_id",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "idx_session_players_actor_id": {
+          "name": "idx_session_players_actor_id",
+          "columns": [
+            "actor_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "session_players_session_id_game_sessions_id_fk": {
           "name": "session_players_session_id_game_sessions_id_fk",

@@ -1,4 +1,4 @@
-﻿import { Hono } from "hono";
+import { Hono } from "hono";
 import { getGameCatalogFromDb } from "@ludoria/db";
 import type { WorkerEnv } from "../env";
 import { createMetadataDb } from "../services/metadata";

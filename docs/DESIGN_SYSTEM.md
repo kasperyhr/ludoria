@@ -1,4 +1,4 @@
-﻿# Design System
+# Design System
 
 ## 视觉风格
 
