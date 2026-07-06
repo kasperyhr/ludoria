@@ -8,3 +8,6 @@ dist
 .env.local
 .DS_Store
 coverage
+
+# Preview deploy config (contains real resource IDs)
+wrangler.preview.toml

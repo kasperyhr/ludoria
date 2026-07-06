@@ -12,6 +12,7 @@ compatibility_date = "2026-06-01"
 binding = "DB"
 database_name = "ludoria-db"
 database_id = "local-ludoria-db-placeholder"
+migrations_dir = "../../packages/db/migrations"
 
 # --- Durable Objects (multiplayer sessions) ---
 [[durable_objects.bindings]]
