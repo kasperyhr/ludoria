@@ -1,40 +1,19 @@
 # Roadmap
 
-## Phase 0: Bootstrap
-Create the monorepo, documentation, rules, local skills, and package placeholders.
+## Phase 0-7C: Foundation
+Monorepo, runnable shell, multiplayer/solo demos, Durable Objects, D1, Cloudflare preview deploy, security hardening.
 
-## Phase 1: Runnable Shell
-Make the web and Worker apps run locally.
+## Phase 8: Premium UI Polish -- COMPLETED
 
-## Phase 2: Demo Multiplayer Game
-Implement Token Bluffing Demo with WebSocket, command validation, and hidden information safety.
+Polished the Web UI to premium board game lounge standard:
 
-## Phase 3: Demo Solo Puzzle
-Implement Sudoku Lite with puzzle/move/hint/completion flow.
+- Global visual baseline: warm dark theme, soft amber accent, glass panel surfacing, layered gradients
+- Home page: hero redesign, three feature cards, skeleton loading, polished game catalog
+- Token Bluffing Demo: token chip styling, formatted event log, connection status indicator, idle check prompt, spectator safety labeling
+- Sudoku Lite: refined 4x4 board, given/input cell differentiation, completion celebration banner, error state feedback
+- Responsive: stacked layouts for tablet/mobile, full-width boards, touch-friendly buttons
+- UI package: added ghost button variant
+- No backend changes, no game rule changes, no hidden state exposure
 
-## Phase 4A-C: Durable Object Architecture
-Durable Object routing, storage snapshots, WebSocket Hibernation, room lifecycle.
-
-## Phase 5-5.1: D1 Metadata Layer
-Drizzle ORM schema (9 tables, 12 indexes), migrations, seed data, metadata helpers, BOM cleanup.
-
-## Phase 6-6.1: Local Deployment Readiness
-Local smoke test, environment check, D1 migration/seed scripts, preview deploy checklist.
-
-## Phase 7A: Cloudflare Preview Deploy Dry Run
-Runbook, preview plan script, preview config check, wrangler preview template.
-
-## Phase 7B: Actual Cloudflare Preview Deploy -- COMPLETED
-- Worker: ludoria-worker
-- Preview URL: https://ludoria-worker.kasperyhr.workers.dev
-- D1: ludoria-preview-db (WNAM)
-- Remote migrations: 2/2
-- Remote seed: 3/3
-- smoke:preview: 28/28
-- Security scan: clean
-
-## Phase 7C: Post-deploy Hardening -- CURRENT
-Post-deploy verification checklist, release checklist, security model updates, preview result documentation.
-
-## Phase 8: Premium UI Polish -- NEXT
-Polish the game hall UI to premium board game lounge standard. Focus on responsive layouts, visual refinement, and demo ergonomics. Does not change deployment architecture or game rules.
+## Phase 9: Next
+Add real multiplayer board games or richer solo puzzles on the stable foundation.

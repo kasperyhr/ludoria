@@ -1,39 +1,62 @@
 # Design System
 
-## 视觉风格
+Phase 8 introduces premium board game lounge visual design.
 
-方向是 premium board game lounge：温暖深色、柔和琥珀强调、克制玻璃面板、细微纹理和平静动效。
+## Visual Style
 
-## 颜色 palette
+- **Theme**: warm dark, board game lounge atmosphere
+- **Accent**: soft amber (#e0ad63 / #f2c982)
+- **Surfaces**: glass-morphism panels with subtle borders and inset highlights
+- **Background**: layered radial gradients suggesting warm tabletop
+- **Motion**: subtle hover transitions, no overwhelming animations
 
-- Background: `#17130f`
-- Surface: `#231c16`
-- Surface glass: `rgba(255, 246, 230, 0.08)`
-- Text: `#f7efe2`
-- Muted text: `#d9cabb`
-- Accent: `#e0ad63`
-- Danger: `#e36f5b`
+## Color Palette
 
-## 字体层级
+| Role | Color |
+|------|-------|
+| Background | #17130f (near-black) |
+| Surface | rgba(35, 28, 22, 0.82) |
+| Text primary | #f7efe2 |
+| Text muted | #cbb9a6 |
+| Amber accent | #e0ad63 |
+| Amber light | #f2c982 |
+| Success | #9ce4b6 |
+| Danger | #ffad9d |
 
-使用系统 sans 字体。页面标题大而克制，游戏桌面和面板使用紧凑标签、清晰数字和可扫描列表。
+## Typography
 
-## 间距
+- Font: Inter, system-ui fallbacks
+- Hero H1: clamp(2.25rem, 6vw, 4rem), letter-spacing -0.02em
+- Section H2: clamp(1.5rem, 3vw, 2rem)
+- Body: 1rem (0.88-1.02rem range), line-height 1.5-1.7
 
-基础间距以 4px 为单位，常用 8、12、16、24、32、48。游戏棋盘和手牌使用稳定尺寸，避免 hover 或状态变化造成布局跳动。
+## Components
 
-## 圆角
+| Component | Description |
+|-----------|-------------|
+| Button | Primary (amber gradient), Secondary (glass), Ghost (text-only) |
+| Card | Glass panel with inset highlight, subtle shadow, hover border glow |
+| Badge | Pill-shaped, neutral/success/danger variants |
+| TokenChip | Inline chip with token-color gradient (red/blue/gold) |
+| ConnectionDot | Animated status indicator (green/amber/gray/red) |
 
-普通控件 6px，卡片和面板 8px。除非未来设计系统明确要求，不使用过大的圆角。
+## Spacing
 
-## 阴影
+- Shell padding: clamp(20px, 4vw, 56px)
+- Card padding: 24px
+- Grid gaps: 16-18px
+- Section margins: 32-64px
 
-优先使用低透明度边框、内阴影和少量层级阴影，避免过重发光。
+## Responsive
 
-## 动效
+- Desktop: 3-column catalog grid, 2-column demo grid, hero sidebar layout
+- Tablet (< 840px): 1-column catalog/demo, stacked hero, sidebar below
+- Mobile (< 480px): reduced padding, compact buttons, full-width boards
 
-动效用于状态反馈、面板展开、回合切换和完成提示。必须支持 `prefers-reduced-motion`。
+## Anti-Patterns
 
-## 响应式布局
-
-桌面端以中央棋盘、侧边玩家列表、聊天/日志面板为主。移动端提供底部操作栏、可折叠聊天、可滑动手牌和适合触摸的 puzzle board。
+- No neon or cyberpunk aesthetics
+- No casino-style flashing lights
+- No full-3D scenes or heavy particle effects
+- No pure-black backgrounds (always warm dark)
+- No unreadable low-contrast text

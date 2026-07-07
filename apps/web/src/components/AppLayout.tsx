@@ -13,11 +13,15 @@ export function AppLayout({ children }: PropsWithChildren) {
         </a>
         <nav className="nav-links" aria-label="Primary navigation">
           <a href="/">大厅</a>
-          <a href="#catalog">游戏目录</a>
-          <a href="#status">联调状态</a>
+          <a href="/#catalog">游戏</a>
+          <a href="/demo/token-bluffing">Token Demo</a>
+          <a href="/demo/sudoku-lite">Sudoku</a>
         </nav>
       </header>
       {children}
+      <footer style={{ maxWidth: 1180, margin: '64px auto 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
+        Ludoria &middot; Cloudflare Game Hub
+      </footer>
     </div>
   );
 }

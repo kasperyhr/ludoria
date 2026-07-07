@@ -4,31 +4,34 @@ import { Badge, Card } from '@ludoria/ui';
 export function HealthStatus({
   health,
   isLoading,
-  error
+  error,
 }: {
   health: HealthResponse | null;
   isLoading: boolean;
   error: string | null;
 }) {
-  const statusText = health?.ok ? 'Worker online' : isLoading ? 'Checking worker' : 'Worker unavailable';
-
   return (
-    <Card className="health-card" id="status">
+    <Card className="health-card">
       <div className="health-card__header">
-        <span>Worker health</span>
-        <Badge variant={health?.ok ? 'success' : error ? 'danger' : 'neutral'}>{statusText}</Badge>
+        <Badge variant={health ? 'success' : 'neutral'}>Worker</Badge>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+          {isLoading ? '检测中...' : error ? '离线' : '在线'}
+        </span>
       </div>
       <dl>
         <div>
-          <dt>Service</dt>
-          <dd>{health?.service ?? 'ludoria-worker'}</dd>
+          <dt>服务状态</dt>
+          <dd>{health ? (health.ok ? '\u2705 正常' : '\u274C 异常') : isLoading ? '\u23F3 加载中' : '\u26A0\uFE0F 未连接'}</dd>
+        </div>
+        <div>
+          <dt>Worker</dt>
+          <dd>{health?.service ?? '—'}</dd>
         </div>
         <div>
           <dt>Phase</dt>
-          <dd>{health?.phase ?? 'phase-1'}</dd>
+          <dd>{health?.phase ?? '—'}</dd>
         </div>
       </dl>
-      {error ? <p className="panel-note panel-note--error">{error}</p> : null}
     </Card>
   );
 }
