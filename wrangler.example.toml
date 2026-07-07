@@ -1,16 +1,18 @@
 # Ludoria Worker - example configuration for Cloudflare preview/production deployment.
-# Copy this to apps/worker/wrangler.toml and replace placeholders before deploying.
+# Copy to apps/worker/wrangler.toml or apps/worker/wrangler.preview.toml.
 
 name = "ludoria-worker"
 main = "apps/worker/src/index.ts"
 compatibility_date = "2026-06-01"
 
-# --- D1 (platform metadata) ---
-# 1. Create a D1 database: wrangler d1 create ludoria-db
-# 2. Copy the returned database_id here.
-# 3. Apply migrations: wrangler d1 migrations apply ludoria-db --remote
-# 4. Seed the game catalog (the worker auto-seeds on first /api/games read).
+# --- Static Assets (MVP: Worker serves Web UI) ---
+# Build the web app first: corepack pnpm build
+# Future: apps/web will deploy to Cloudflare Pages.
+[assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
 
+# --- D1 (platform metadata) ---
 [[d1_databases]]
 binding = "DB"
 database_name = "ludoria-db"
@@ -23,31 +25,16 @@ class_name = "GameSessionObject"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["GameSessionObject"]
+new_sqlite_classes = ["GameSessionObject"]
 
 # --- Preview Environment (optional) ---
-# If you prefer a separate preview environment, uncomment the block below
-# and add the real preview database_id.
-#
+# Uncomment for a separate preview env with its own D1.
 # [env.preview]
 # name = "ludoria-worker-preview"
-#
 # [[env.preview.d1_databases]]
 # binding = "DB"
 # database_name = "ludoria-preview-db"
 # database_id = "REPLACE_WITH_PREVIEW_DATABASE_ID"
-#
-# [[env.preview.durable_objects.bindings]]
-# name = "GAME_SESSION_OBJECT"
-# class_name = "GameSessionObject"
-#
-# [[env.preview.migrations]]
-# tag = "v1"
-# new_classes = ["GameSessionObject"]
 
-# --- R2 (future: images, card art, tokens) ---
-# Not configured yet. Add R2 bindings when asset storage is needed.
-
-# --- Secrets ---
-# Set via: wrangler secret put <NAME>
-# No secrets are currently required for local development.
+# --- R2 (future) ---
+# Not configured yet.

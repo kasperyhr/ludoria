@@ -5,9 +5,13 @@ name = "ludoria-worker"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
 
+# --- Static Assets (MVP: Worker serves Web UI) ---
+# Future: apps/web will deploy to Cloudflare Pages.
+[assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
+
 # --- D1 (platform metadata) ---
-# database_id is a placeholder for local dev only.
-# Replace with your real D1 database_id before deploying.
 [[d1_databases]]
 binding = "DB"
 database_name = "ludoria-db"

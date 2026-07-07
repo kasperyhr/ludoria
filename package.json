@@ -17,6 +17,7 @@
     "db:seed:local": "node scripts/seed-d1.mjs",
     "smoke:local": "node scripts/smoke-local.mjs",
     "smoke:preview": "node scripts/smoke-local.mjs",
+    "smoke:web-preview": "node scripts/smoke-web-preview.mjs",
     "preview:plan": "node scripts/preview-plan.mjs"
   },
   "devDependencies": {

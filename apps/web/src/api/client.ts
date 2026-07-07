@@ -12,7 +12,10 @@ import type {
   PuzzlePublicView
 } from '@ludoria/protocol';
 
-const apiBaseUrl = import.meta.env.VITE_LUDORIA_WORKER_API_URL ?? '/worker-api';
+// MVP Worker deployment: same-origin (empty base).
+// Local dev: set VITE_LUDORIA_API_ORIGIN=/worker-api via .env (Vite proxy).
+// Future Pages: set VITE_LUDORIA_API_ORIGIN=https://worker-url.
+const apiBaseUrl = import.meta.env.VITE_LUDORIA_API_ORIGIN ?? '';
 
 async function requestJson<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`);
@@ -27,10 +30,8 @@ async function requestJson<T>(path: string): Promise<T> {
 async function postJson<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
   });
 
   if (!response.ok) {
@@ -64,10 +65,7 @@ export function getPuzzleSession(sessionId: string): Promise<PuzzlePublicView> {
   return requestJson<PuzzlePublicView>(`/api/puzzles/${sessionId}`);
 }
 
-export function applyPuzzleMove(
-  sessionId: string,
-  body: ApplyPuzzleMoveRequest
-): Promise<ApplyPuzzleMoveResponse> {
+export function applyPuzzleMove(sessionId: string, body: ApplyPuzzleMoveRequest): Promise<ApplyPuzzleMoveResponse> {
   return postJson<ApplyPuzzleMoveResponse>(`/api/puzzles/${sessionId}/move`, body);
 }
 
