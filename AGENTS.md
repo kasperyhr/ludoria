@@ -21,4 +21,18 @@
 19. 不要擅自修改 DNS。
 20. 不要擅自创建付费资源。
 21. 不要擅自引入重量级依赖。
-22. 中文文档、README、AGENTS 和 repo-scoped skills 必须以 UTF-8 正确保存；如果出现连续问号、乱码或替换字符，必须先修复再继续开发。
+22. 中文文档、README、AGENTS 和 repo-scoped skills 必须以 UTF-8 正确保存
+## Encoding and Markdown Reading
+
+All repository text files should be UTF-8 without BOM.
+
+If Chinese text appears garbled in PowerShell, terminal output, or an editor, do not assume the file is corrupted. First:
+1. read the file with UTF-8 explicitly;
+2. run `corepack pnpm check:encoding`;
+3. only fix the file if the scan confirms real corruption.
+
+Do not add UTF-8 BOM to source files.
+
+## When starting a new feature branch or Codex conversation
+
+Read the relevant handoff document first: docs/HANDOFF_OVERVIEW.md (general), then docs/HANDOFF_FRONTEND_UX.md, docs/HANDOFF_GAME_DEVELOPMENT.md, etc. See AGENT_START_HERE.md for a quick bootstrap guide.；如果出现连续问号、乱码或替换字符，必须先修复再继续开发。

@@ -68,6 +68,20 @@ The web app proxies `/worker-api/*` to the worker.
 - `http://127.0.0.1:5173/demo/token-bluffing`
 - `http://127.0.0.1:5173/demo/sudoku-lite`
 
+
+## For New Codex Conversations
+
+Read `AGENT_START_HERE.md` first, then the relevant handoff guide:
+
+| Task | Document |
+|------|----------|
+| Frontend UX | [docs/HANDOFF_FRONTEND_UX.md](docs/HANDOFF_FRONTEND_UX.md) |
+| New Game | [docs/HANDOFF_GAME_DEVELOPMENT.md](docs/HANDOFF_GAME_DEVELOPMENT.md) |
+| Admin / Security | [docs/HANDOFF_ADMIN_SECURITY.md](docs/HANDOFF_ADMIN_SECURITY.md) |
+| Auth / Account | [docs/HANDOFF_AUTH_ACCOUNT.md](docs/HANDOFF_AUTH_ACCOUNT.md) |
+| Deployment | [docs/HANDOFF_DEPLOYMENT.md](docs/HANDOFF_DEPLOYMENT.md) |
+| Overview | [docs/HANDOFF_OVERVIEW.md](docs/HANDOFF_OVERVIEW.md) |
+| Phase Plan | [docs/NEXT_PHASE_PLAN.md](docs/NEXT_PHASE_PLAN.md) |
 ## Data Boundaries
 
 - **Durable Object storage**: authoritative multiplayer game state, hidden tokens, session snapshots, WebSocket attachments.

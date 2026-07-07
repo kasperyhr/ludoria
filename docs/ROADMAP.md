@@ -1,19 +1,23 @@
 # Roadmap
 
-## Phase 0-7C: Foundation
-Monorepo, runnable shell, multiplayer/solo demos, Durable Objects, D1, Cloudflare preview deploy, security hardening.
+## Completed Phases (0-8C)
 
-## Phase 8: Premium UI Polish -- COMPLETED
+Monorepo scaffold, runnable shell, Token Bluffing + Sudoku Lite demos, Durable Objects, D1 metadata, preview deploy, UI polish, Worker Static Assets MVP.
 
-Polished the Web UI to premium board game lounge standard:
+See `docs/HANDOFF_OVERVIEW.md` for details.
 
-- Global visual baseline: warm dark theme, soft amber accent, glass panel surfacing, layered gradients
-- Home page: hero redesign, three feature cards, skeleton loading, polished game catalog
-- Token Bluffing Demo: token chip styling, formatted event log, connection status indicator, idle check prompt, spectator safety labeling
-- Sudoku Lite: refined 4x4 board, given/input cell differentiation, completion celebration banner, error state feedback
-- Responsive: stacked layouts for tablet/mobile, full-width boards, touch-friendly buttons
-- UI package: added ghost button variant
-- No backend changes, no game rule changes, no hidden state exposure
+## Phase 9: Project Handoff & Parallel Development Guides -- CURRENT
 
-## Phase 9: Next
-Add real multiplayer board games or richer solo puzzles on the stable foundation.
+Handoff documents for new Codex conversations, encoding safety, phase planning.
+
+## Next Phases
+
+See `docs/NEXT_PHASE_PLAN.md` for detailed phase plan.
+
+- 10A: Public Game Hall UX Cleanup
+- 10B: Player-Friendly Room Codes
+- 11: Auth & Account Foundation
+- 12: Admin Moderation Console
+- 13: Admin Review View
+- 14: First Real Multiplayer Board Game
+- 15: Cloudflare Pages Migration
